@@ -197,6 +197,15 @@ interface MoveDrag {
         <button type="button" class="btn ghost" (click)="reset()">{{ 'arena.reset' | t }}</button>
         <button
           type="button"
+          class="btn ghost punch"
+          [disabled]="busy() || structureOk()"
+          (click)="solveComplete()"
+        >
+          <app-arena-icon name="xp" size="1.1rem" tone="amber" />
+          {{ 'arena.solve' | t }}
+        </button>
+        <button
+          type="button"
           class="btn primary punch"
           [disabled]="busy() || structureOk()"
           (click)="validate()"
@@ -1086,6 +1095,51 @@ export class BlockCanvas implements OnChanges, OnDestroy {
       if (!this.liveReady() || this.structureOk()) return;
       void this.validate();
     }, 280);
+  }
+
+  /** Place every required piece, wire expected edges, then check. */
+  solveComplete(): void {
+    if (this.busy() || this.structureOk()) return;
+    if (this.autoCheckTimer) {
+      clearTimeout(this.autoCheckTimer);
+      this.autoCheckTimer = null;
+    }
+    this.reset();
+
+    const ids = this.challenge.requiredPieceIds;
+    const cols = ids.length <= 4 ? 2 : 3;
+    const gapX = 168;
+    const gapY = 124;
+    const startX = 36;
+    const startY = 32;
+    const byPiece = new Map<string, string>();
+
+    const placed = ids.map((pieceId, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const snapped = this.snap(startX + col * gapX, startY + row * gapY);
+      const instanceId = `${pieceId}-${crypto.randomUUID().slice(0, 8)}`;
+      byPiece.set(pieceId, instanceId);
+      return {
+        instanceId,
+        pieceId,
+        x: snapped.x,
+        y: snapped.y,
+      };
+    });
+    this.blocks.set(placed);
+    this.placeIndex = placed.length;
+
+    this.edges.set(
+      this.challenge.expectedEdges.map((expected) => ({
+        id: `e-${crypto.randomUUID().slice(0, 8)}`,
+        fromInstanceId: byPiece.get(expected.from)!,
+        toInstanceId: byPiece.get(expected.to)!,
+        relation: expected.relation,
+      }))
+    );
+
+    void this.validate();
   }
 
   async validate(): Promise<void> {

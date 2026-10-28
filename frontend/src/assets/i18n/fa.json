@@ -59,6 +59,7 @@
   "arena.relations": "لینک",
   "arena.connectHint": "A → B",
   "arena.reset": "ریست",
+  "arena.solve": "حل کامل",
   "arena.validate": "بررسی",
   "arena.runFlow": "پخش جریان",
   "arena.flowDone": "جریان تمام — درست بود.",

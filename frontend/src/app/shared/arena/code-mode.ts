@@ -57,6 +57,10 @@ interface RenderPart {
 
       <div class="actions">
         <button type="button" class="btn ghost" (click)="reset()">{{ 'arena.reset' | t }}</button>
+        <button type="button" class="btn ghost punch" [disabled]="passed()" (click)="solveComplete()">
+          <app-arena-icon name="xp" size="1.1rem" tone="amber" />
+          {{ 'arena.solve' | t }}
+        </button>
         <button type="button" class="btn primary punch" (click)="grade()">
           <app-arena-icon name="trophy" size="1.1rem" />
           {{ 'cta.checkAnswer' | t }}
@@ -216,6 +220,14 @@ export class CodeMode implements OnChanges {
     this.answers.set({});
     this.feedback.set('');
     this.passed.set(false);
+  }
+
+  solveComplete(): void {
+    if (this.passed()) return;
+    const filled: Record<string, string> = {};
+    for (const blank of this.challenge.blanks) filled[blank.id] = blank.correct;
+    this.answers.set(filled);
+    this.grade();
   }
 
   grade(): void {

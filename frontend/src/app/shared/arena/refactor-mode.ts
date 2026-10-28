@@ -53,6 +53,10 @@ import { ArenaIcon } from './arena-icon';
 
       <div class="actions">
         <button type="button" class="btn ghost" (click)="reset()">{{ 'arena.reset' | t }}</button>
+        <button type="button" class="btn ghost punch" [disabled]="passed()" (click)="solveComplete()">
+          <app-arena-icon name="xp" size="1.1rem" tone="amber" />
+          {{ 'arena.solve' | t }}
+        </button>
         <button type="button" class="btn primary punch" (click)="grade()">
           <app-arena-icon name="play" size="1.1rem" />
           {{ 'arena.refactor.score' | t }}
@@ -217,6 +221,15 @@ export class RefactorMode implements OnChanges {
     this.feedback.set('');
     this.passed.set(false);
     this.score.set(0);
+  }
+
+  solveComplete(): void {
+    if (this.passed()) return;
+    const correct = new Set(
+      this.challenge.moves.filter((m) => m.correct).map((m) => m.id)
+    );
+    this.selected.set(correct);
+    this.grade();
   }
 
   grade(): void {

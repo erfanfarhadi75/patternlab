@@ -59,6 +59,7 @@
   "arena.relations": "Link",
   "arena.connectHint": "A → B",
   "arena.reset": "Reset",
+  "arena.solve": "Solve it",
   "arena.validate": "Check",
   "arena.runFlow": "Play flow",
   "arena.flowDone": "Flow done — you got it.",
