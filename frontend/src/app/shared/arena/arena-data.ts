@@ -1,37 +1,35 @@
 import { BlockChallenge, CodeChallenge, RefactorChallenge } from './arena.models';
 
+export const PATTERN_ART: Record<string, string> = {
+  'factory-method': '/assets/arena/forge-create.svg',
+  adapter: '/assets/arena/plug-adapter.svg',
+  observer: '/assets/arena/notify-pulse.svg',
+};
+
 export const BLOCK_CHALLENGES: Record<string, BlockChallenge> = {
   'factory-method': {
     patternId: 'factory-method',
     brief: {
-      en: 'Assemble Creator → Product. Concrete creator decides which product to instantiate.',
-      fa: 'ساختار Creator → Product را بچینید. Creator مشخص تصمیم می‌گیرد کدام محصول ساخته شود.',
+      en: 'Creator builds Product — subclass picks which.',
+      fa: 'Creator می‌سازد؛ زیرکلاس انتخاب می‌کند.',
     },
     pieces: [
-      {
-        id: 'creator',
-        label: { en: 'Creator', fa: 'Creator' },
-        hint: { en: 'Declares factoryMethod()', fa: 'متد factoryMethod را اعلام می‌کند' },
-      },
+      { id: 'creator', label: { en: 'Creator', fa: 'Creator' }, hint: { en: 'factoryMethod()', fa: 'factoryMethod()' } },
       {
         id: 'concrete-creator',
         label: { en: 'ConcreteCreator', fa: 'ConcreteCreator' },
-        hint: { en: 'Overrides factoryMethod()', fa: 'factoryMethod را بازنویسی می‌کند' },
+        hint: { en: 'override + new', fa: 'override + new' },
       },
-      {
-        id: 'product',
-        label: { en: 'Product', fa: 'Product' },
-        hint: { en: 'Interface the client depends on', fa: 'اینترفیسی که کلاینت به آن وابسته است' },
-      },
+      { id: 'product', label: { en: 'Product', fa: 'Product' }, hint: { en: 'client contract', fa: 'قرارداد کلاینت' } },
       {
         id: 'concrete-product',
         label: { en: 'ConcreteProduct', fa: 'ConcreteProduct' },
-        hint: { en: 'The real object returned', fa: 'شیء واقعی برگشتی' },
+        hint: { en: 'real instance', fa: 'نمونه واقعی' },
       },
       {
         id: 'singleton',
         label: { en: 'Singleton', fa: 'Singleton' },
-        hint: { en: 'Distractor — not part of this pattern', fa: 'گمراه‌کننده — جزء این الگو نیست' },
+        hint: { en: 'trap', fa: 'تله' },
         distractor: true,
       },
     ],
@@ -43,69 +41,30 @@ export const BLOCK_CHALLENGES: Record<string, BlockChallenge> = {
     ],
     relations: ['extends', 'implements', 'creates'],
     animation: [
-      {
-        pieceIds: ['creator'],
-        message: {
-          en: 'Client calls Creator.factoryMethod() without knowing the concrete type.',
-          fa: 'کلاینت Creator.factoryMethod را صدا می‌زند بدون دانستن نوع مشخص.',
-        },
-      },
-      {
-        pieceIds: ['concrete-creator'],
-        message: {
-          en: 'ConcreteCreator overrides the hook and chooses the product class.',
-          fa: 'ConcreteCreator هوک را بازنویسی می‌کند و کلاس محصول را انتخاب می‌کند.',
-        },
-      },
+      { pieceIds: ['creator'], message: { en: 'Call factoryMethod()', fa: 'صدا: factoryMethod()' } },
+      { pieceIds: ['concrete-creator'], message: { en: 'Subclass chooses class', fa: 'زیرکلاس کلاس را انتخاب می‌کند' } },
       {
         pieceIds: ['concrete-creator', 'concrete-product'],
-        message: {
-          en: 'new ConcreteProduct() — creation is localized in one place.',
-          fa: 'new ConcreteProduct() — ساخت در یک نقطه متمرکز است.',
-        },
+        message: { en: 'new ConcreteProduct()', fa: 'new ConcreteProduct()' },
       },
       {
         pieceIds: ['product', 'concrete-product'],
-        message: {
-          en: 'Returned as Product. Client stays decoupled from concrete classes.',
-          fa: 'به‌صورت Product برمی‌گردد. کلاینت از کلاس‌های مشخص جدا می‌ماند.',
-        },
+        message: { en: 'Return as Product — client stays free', fa: 'برگشت به‌صورت Product — کلاینت آزاد می‌ماند' },
       },
     ],
   },
   adapter: {
     patternId: 'adapter',
     brief: {
-      en: 'Wrap an Adaptee so a Client can talk to the Target interface it expects.',
-      fa: 'Adaptee را بپیچید تا Client با اینترفیس Target مورد انتظار حرف بزند.',
+      en: 'Wrap old API so Client speaks Target.',
+      fa: 'API قدیمی را بپیچ تا Client با Target حرف بزند.',
     },
     pieces: [
-      {
-        id: 'target',
-        label: { en: 'Target', fa: 'Target' },
-        hint: { en: 'Interface the client expects', fa: 'اینترفیس مورد انتظار کلاینت' },
-      },
-      {
-        id: 'adapter',
-        label: { en: 'Adapter', fa: 'Adapter' },
-        hint: { en: 'Translates Target → Adaptee', fa: 'Target را به Adaptee ترجمه می‌کند' },
-      },
-      {
-        id: 'adaptee',
-        label: { en: 'Adaptee', fa: 'Adaptee' },
-        hint: { en: 'Existing incompatible API', fa: 'API ناسازگار موجود' },
-      },
-      {
-        id: 'client',
-        label: { en: 'Client', fa: 'Client' },
-        hint: { en: 'Depends only on Target', fa: 'فقط به Target وابسته است' },
-      },
-      {
-        id: 'facade',
-        label: { en: 'Facade', fa: 'Facade' },
-        hint: { en: 'Distractor — different intent', fa: 'گمراه‌کننده — نیت متفاوت' },
-        distractor: true,
-      },
+      { id: 'target', label: { en: 'Target', fa: 'Target' }, hint: { en: 'wanted API', fa: 'API مطلوب' } },
+      { id: 'adapter', label: { en: 'Adapter', fa: 'Adapter' }, hint: { en: 'translator', fa: 'مترجم' } },
+      { id: 'adaptee', label: { en: 'Adaptee', fa: 'Adaptee' }, hint: { en: 'legacy', fa: 'قدیمی' } },
+      { id: 'client', label: { en: 'Client', fa: 'Client' }, hint: { en: 'uses Target', fa: 'فقط Target' } },
+      { id: 'facade', label: { en: 'Facade', fa: 'Facade' }, hint: { en: 'trap', fa: 'تله' }, distractor: true },
     ],
     requiredPieceIds: ['target', 'adapter', 'adaptee', 'client'],
     expectedEdges: [
@@ -115,74 +74,35 @@ export const BLOCK_CHALLENGES: Record<string, BlockChallenge> = {
     ],
     relations: ['implements', 'wraps', 'uses'],
     animation: [
-      {
-        pieceIds: ['client', 'target'],
-        message: {
-          en: 'Client calls Target.request() — the only contract it knows.',
-          fa: 'Client متد Target.request را صدا می‌زند — تنها قراردادی که می‌شناسد.',
-        },
-      },
-      {
-        pieceIds: ['adapter'],
-        message: {
-          en: 'Adapter receives the call and maps it to the legacy shape.',
-          fa: 'Adapter فراخوانی را می‌گیرد و به شکل قدیمی نگاشت می‌کند.',
-        },
-      },
+      { pieceIds: ['client', 'target'], message: { en: 'Client → Target.request()', fa: 'Client → Target.request()' } },
+      { pieceIds: ['adapter'], message: { en: 'Adapter maps the call', fa: 'Adapter نگاشت می‌کند' } },
       {
         pieceIds: ['adapter', 'adaptee'],
-        message: {
-          en: 'Adaptee.specificRequest() runs. Legacy code stays untouched.',
-          fa: 'Adaptee.specificRequest اجرا می‌شود. کد قدیمی دست‌نخورده می‌ماند.',
-        },
+        message: { en: 'Adaptee.specificRequest()', fa: 'Adaptee.specificRequest()' },
       },
       {
         pieceIds: ['client', 'adapter', 'adaptee'],
-        message: {
-          en: 'Result flows back through the Adapter. Client never saw the mismatch.',
-          fa: 'نتیجه از Adapter برمی‌گردد. Client ناسازگاری را ندید.',
-        },
+        message: { en: 'Result back — mismatch hidden', fa: 'نتیجه برگشت — ناسازگاری پنهان' },
       },
     ],
   },
   observer: {
     patternId: 'observer',
     brief: {
-      en: 'Wire a Subject that notifies multiple Observers when state changes.',
-      fa: 'Subject را طوری وصل کنید که با تغییر وضعیت، چند Observer را مطلع کند.',
+      en: 'One Subject → many Observers on change.',
+      fa: 'یک Subject → چند Observer با تغییر.',
     },
     pieces: [
-      {
-        id: 'subject',
-        label: { en: 'Subject', fa: 'Subject' },
-        hint: { en: 'Attach / detach / notify', fa: 'اتصال / قطع / اطلاع' },
-      },
+      { id: 'subject', label: { en: 'Subject', fa: 'Subject' }, hint: { en: 'attach/notify', fa: 'attach/notify' } },
       {
         id: 'concrete-subject',
         label: { en: 'ConcreteSubject', fa: 'ConcreteSubject' },
-        hint: { en: 'Holds state + notify()', fa: 'وضعیت را نگه می‌دارد و notify می‌کند' },
+        hint: { en: 'holds state', fa: 'نگهدار وضعیت' },
       },
-      {
-        id: 'observer',
-        label: { en: 'Observer', fa: 'Observer' },
-        hint: { en: 'update() contract', fa: 'قرارداد update' },
-      },
-      {
-        id: 'observer-a',
-        label: { en: 'ObserverA', fa: 'ObserverA' },
-        hint: { en: 'First subscriber', fa: 'اولین مشترک' },
-      },
-      {
-        id: 'observer-b',
-        label: { en: 'ObserverB', fa: 'ObserverB' },
-        hint: { en: 'Second subscriber', fa: 'دومین مشترک' },
-      },
-      {
-        id: 'mediator',
-        label: { en: 'Mediator', fa: 'Mediator' },
-        hint: { en: 'Distractor — centralizes dialogue differently', fa: 'گمراه‌کننده — گفتگو را طور دیگر متمرکز می‌کند' },
-        distractor: true,
-      },
+      { id: 'observer', label: { en: 'Observer', fa: 'Observer' }, hint: { en: 'update()', fa: 'update()' } },
+      { id: 'observer-a', label: { en: 'ObserverA', fa: 'ObserverA' }, hint: { en: 'subscriber', fa: 'مشترک' } },
+      { id: 'observer-b', label: { en: 'ObserverB', fa: 'ObserverB' }, hint: { en: 'subscriber', fa: 'مشترک' } },
+      { id: 'mediator', label: { en: 'Mediator', fa: 'Mediator' }, hint: { en: 'trap', fa: 'تله' }, distractor: true },
     ],
     requiredPieceIds: ['subject', 'concrete-subject', 'observer', 'observer-a', 'observer-b'],
     expectedEdges: [
@@ -194,34 +114,10 @@ export const BLOCK_CHALLENGES: Record<string, BlockChallenge> = {
     ],
     relations: ['extends', 'implements', 'notifies'],
     animation: [
-      {
-        pieceIds: ['concrete-subject'],
-        message: {
-          en: 'State changes on ConcreteSubject.',
-          fa: 'وضعیت روی ConcreteSubject عوض می‌شود.',
-        },
-      },
-      {
-        pieceIds: ['concrete-subject', 'subject'],
-        message: {
-          en: 'notify() walks the subscriber list.',
-          fa: 'notify لیست مشترکین را طی می‌کند.',
-        },
-      },
-      {
-        pieceIds: ['observer-a'],
-        message: {
-          en: 'ObserverA.update() runs — first link in the chain.',
-          fa: 'ObserverA.update اجرا می‌شود — حلقه اول زنجیره.',
-        },
-      },
-      {
-        pieceIds: ['observer-b'],
-        message: {
-          en: 'ObserverB.update() runs — fan-out complete, publishers stay unaware of UI details.',
-          fa: 'ObserverB.update اجرا می‌شود — پخش تمام؛ ناشر از جزئیات UI بی‌خبر می‌ماند.',
-        },
-      },
+      { pieceIds: ['concrete-subject'], message: { en: 'State changes', fa: 'وضعیت عوض شد' } },
+      { pieceIds: ['concrete-subject', 'subject'], message: { en: 'notify() fans out', fa: 'notify پخش می‌کند' } },
+      { pieceIds: ['observer-a'], message: { en: 'ObserverA.update()', fa: 'ObserverA.update()' } },
+      { pieceIds: ['observer-b'], message: { en: 'ObserverB.update() — done', fa: 'ObserverB.update() — تمام' } },
     ],
   },
 };
@@ -229,14 +125,8 @@ export const BLOCK_CHALLENGES: Record<string, BlockChallenge> = {
 export const CODE_CHALLENGES: Record<string, CodeChallenge> = {
   'factory-method': {
     patternId: 'factory-method',
-    title: {
-      en: 'Fill the factory hook',
-      fa: 'هوک کارخانه را کامل کنید',
-    },
-    brief: {
-      en: 'Complete the TypeScript skeleton so creation stays behind factoryMethod().',
-      fa: 'اسکلت TypeScript را کامل کنید تا ساخت پشت factoryMethod بماند.',
-    },
+    title: { en: 'Fill the hook', fa: 'هوک را پر کن' },
+    brief: { en: 'Creation stays behind factoryMethod().', fa: 'ساخت فقط پشت factoryMethod().' },
     lines: [
       'abstract class Dialog {',
       '  abstract {{blank1}}(): Button;',
@@ -261,14 +151,8 @@ export const CODE_CHALLENGES: Record<string, CodeChallenge> = {
   },
   adapter: {
     patternId: 'adapter',
-    title: {
-      en: 'Wire the wrap',
-      fa: 'پوشش را وصل کنید',
-    },
-    brief: {
-      en: 'Make StockAdapter speak the analytics Target while wrapping the legacy feed.',
-      fa: 'StockAdapter را طوری بنویسید که Target آنالیتیکس را صحبت کند و فید قدیمی را بپیچد.',
-    },
+    title: { en: 'Wire the wrap', fa: 'پوشش را وصل کن' },
+    brief: { en: 'Adapter speaks Target, wraps legacy.', fa: 'Adapter = Target + wrap قدیمی.' },
     lines: [
       'interface AnalyticsTarget {',
       '  fetch(): Promise<Quote>;',
@@ -283,34 +167,16 @@ export const CODE_CHALLENGES: Record<string, CodeChallenge> = {
       '}',
     ],
     blanks: [
-      {
-        id: 'blank1',
-        choices: ['AnalyticsTarget', 'LegacyFeed', 'Observer'],
-        correct: 'AnalyticsTarget',
-      },
+      { id: 'blank1', choices: ['AnalyticsTarget', 'LegacyFeed', 'Observer'], correct: 'AnalyticsTarget' },
       { id: 'blank2', choices: ['LegacyFeed', 'AnalyticsTarget', 'HttpClient'], correct: 'LegacyFeed' },
-      {
-        id: 'blank3',
-        choices: ['pullXmlTick', 'fetch', 'notify'],
-        correct: 'pullXmlTick',
-      },
-      {
-        id: 'blank4',
-        choices: ['normalizeQuote', 'JSON.parse', 'cloneDeep'],
-        correct: 'normalizeQuote',
-      },
+      { id: 'blank3', choices: ['pullXmlTick', 'fetch', 'notify'], correct: 'pullXmlTick' },
+      { id: 'blank4', choices: ['normalizeQuote', 'JSON.parse', 'cloneDeep'], correct: 'normalizeQuote' },
     ],
   },
   observer: {
     patternId: 'observer',
-    title: {
-      en: 'Close the notify loop',
-      fa: 'حلقه notify را ببندید',
-    },
-    brief: {
-      en: 'Subscribers register once; state changes fan out through notify().',
-      fa: 'مشترکین یک‌بار ثبت می‌شوند؛ تغییر وضعیت از طریق notify پخش می‌شود.',
-    },
+    title: { en: 'Close the loop', fa: 'حلقه را ببند' },
+    brief: { en: 'Change → notify → update.', fa: 'تغییر → notify → update.' },
     lines: [
       'class PriceFeed {',
       '  private subs: Observer[] = [];',
@@ -340,162 +206,108 @@ export const CODE_CHALLENGES: Record<string, CodeChallenge> = {
 export const REFACTOR_CHALLENGES: Record<string, RefactorChallenge> = {
   'factory-method': {
     patternId: 'factory-method',
-    title: {
-      en: 'Untangle construction switch',
-      fa: 'سوییچ ساخت را باز کنید',
-    },
+    title: { en: 'Kill the switch', fa: 'سوییچ را بکش' },
     smell: {
-      en: 'CheckoutService switches on platform strings and constructs concrete buttons inline. Adding mobile means editing this class again.',
-      fa: 'CheckoutService روی رشتهٔ پلتفرم سوییچ می‌کند و دکمه را inline می‌سازد. افزودن موبایل یعنی دوباره همین کلاس را ویرایش کنید.',
+      en: 'Checkout switches on platform and builds widgets inline.',
+      fa: 'Checkout روی پلتفرم سوییچ می‌کند و ویجت را inline می‌سازد.',
     },
     minCorrect: 3,
     moves: [
       {
         id: 'extract-creator',
-        label: {
-          en: 'Introduce an abstract Dialog with factoryMethod()',
-          fa: 'یک Dialog انتزاعی با factoryMethod معرفی کنید',
-        },
+        label: { en: 'Abstract Dialog + factoryMethod()', fa: 'Dialog انتزاعی + factoryMethod()' },
         correct: true,
       },
       {
         id: 'concrete-per-platform',
-        label: {
-          en: 'Move each platform branch into its own ConcreteCreator',
-          fa: 'هر شاخهٔ پلتفرم را به ConcreteCreator خودش ببرید',
-        },
+        label: { en: 'One ConcreteCreator per platform', fa: 'یک ConcreteCreator برای هر پلتفرم' },
         correct: true,
       },
       {
         id: 'depend-on-product',
-        label: {
-          en: 'Have Checkout depend on Product/Button, not concrete widgets',
-          fa: 'Checkout را به Product/Button وابسته کنید نه ویجت‌های مشخص',
-        },
+        label: { en: 'Depend on Product/Button only', fa: 'فقط به Product/Button وابسته شو' },
         correct: true,
       },
       {
         id: 'add-singleton',
-        label: {
-          en: 'Wrap Dialog in a Singleton for global access',
-          fa: 'Dialog را در Singleton بپیچید تا سراسری شود',
-        },
+        label: { en: 'Wrap Dialog in Singleton', fa: 'Dialog را Singleton کن' },
         correct: false,
       },
       {
         id: 'hardcode-web',
-        label: {
-          en: 'Hard-code WebButton everywhere to simplify types',
-          fa: 'همه‌جا WebButton را hard-code کنید تا تایپ ساده‌تر شود',
-        },
+        label: { en: 'Hard-code WebButton everywhere', fa: 'همه‌جا WebButton سخت‌کد' },
         correct: false,
       },
     ],
   },
   adapter: {
     patternId: 'adapter',
-    title: {
-      en: 'Stop rewriting the client',
-      fa: 'بازنویسی کلاینت را متوقف کنید',
-    },
+    title: { en: 'Stop rewriting Client', fa: 'دیگر Client را بازنویس نکن' },
     smell: {
-      en: 'ReportingService calls LegacyXmlFeed.pullXmlTick() directly and parses XML in three places. A new JSON vendor is landing next sprint.',
-      fa: 'ReportingService مستقیم LegacyXmlFeed.pullXmlTick را صدا می‌زند و XML را در سه جا پارس می‌کند. فروشندهٔ JSON هفته بعد می‌آید.',
+      en: 'Reporting calls LegacyXmlFeed and parses XML in 3 places.',
+      fa: 'Reporting مستقیم LegacyXmlFeed را صدا می‌زند و XML را ۳ جا پارس می‌کند.',
     },
     minCorrect: 3,
     moves: [
       {
         id: 'define-target',
-        label: {
-          en: 'Define a stable AnalyticsTarget the reporting code already wants',
-          fa: 'یک AnalyticsTarget پایدار تعریف کنید که کد گزارش از قبل می‌خواهد',
-        },
+        label: { en: 'Stable AnalyticsTarget', fa: 'AnalyticsTarget پایدار' },
         correct: true,
       },
       {
         id: 'wrap-legacy',
-        label: {
-          en: 'Add an Adapter that wraps LegacyXmlFeed and normalizes quotes',
-          fa: 'Adapterای اضافه کنید که LegacyXmlFeed را بپیچد و quote را نرمال کند',
-        },
+        label: { en: 'Adapter wraps LegacyXmlFeed', fa: 'Adapter دور LegacyXmlFeed' },
         correct: true,
       },
       {
         id: 'client-on-target',
-        label: {
-          en: 'Point ReportingService at Target only — swap adapters per vendor',
-          fa: 'ReportingService را فقط به Target وصل کنید — Adapter را عوض کنید',
-        },
+        label: { en: 'Reporting → Target only', fa: 'Reporting فقط → Target' },
         correct: true,
       },
       {
         id: 'fork-service',
-        label: {
-          en: 'Duplicate ReportingService once per vendor feed',
-          fa: 'ReportingService را برای هر فید فروشنده کپی کنید',
-        },
+        label: { en: 'Duplicate service per vendor', fa: 'سرویس را برای هر فروشنده کپی کن' },
         correct: false,
       },
       {
         id: 'edit-legacy',
-        label: {
-          en: 'Change LegacyXmlFeed’s public API to match analytics',
-          fa: 'API عمومی LegacyXmlFeed را با آنالیتیکس یکی کنید',
-        },
+        label: { en: 'Change legacy public API', fa: 'API عمومی قدیمی را عوض کن' },
         correct: false,
       },
     ],
   },
   observer: {
     patternId: 'observer',
-    title: {
-      en: 'Break the notify spaghetti',
-      fa: 'اسپاگتی notify را باز کنید',
-    },
+    title: { en: 'Break notify spaghetti', fa: 'اسپاگتی notify را ببر' },
     smell: {
-      en: 'OrderBook mutates price then manually calls chart.redraw(), log.write(), and badge.flash(). Every new widget edits OrderBook.',
-      fa: 'OrderBook قیمت را عوض می‌کند بعد دستی chart.redraw، log.write و badge.flash را صدا می‌زند. هر ویجت جدید OrderBook را ویرایش می‌کند.',
+      en: 'OrderBook manually calls chart, log, badge after every price change.',
+      fa: 'OrderBook بعد از هر قیمت دستی chart و log و badge را صدا می‌زند.',
     },
     minCorrect: 3,
     moves: [
       {
         id: 'subject-list',
-        label: {
-          en: 'Give OrderBook a subscriber list with attach/detach',
-          fa: 'به OrderBook لیست مشترک با attach/detach بدهید',
-        },
+        label: { en: 'Subscriber list + attach/detach', fa: 'لیست مشترک + attach/detach' },
         correct: true,
       },
       {
         id: 'notify-loop',
-        label: {
-          en: 'Replace direct widget calls with a single notify() loop',
-          fa: 'فراخوانی مستقیم ویجت‌ها را با یک حلقه notify جایگزین کنید',
-        },
+        label: { en: 'One notify() loop', fa: 'یک حلقه notify()' },
         correct: true,
       },
       {
         id: 'observer-iface',
-        label: {
-          en: 'Have Chart/Log/Badge implement a shared Observer.update()',
-          fa: 'Chart/Log/Badge یک Observer.update مشترک پیاده کنند',
-        },
+        label: { en: 'Shared Observer.update()', fa: 'Observer.update() مشترک' },
         correct: true,
       },
       {
         id: 'god-object',
-        label: {
-          en: 'Pass Chart, Log, and Badge into OrderBook’s constructor forever',
-          fa: 'Chart و Log و Badge را برای همیشه به سازندهٔ OrderBook بدهید',
-        },
+        label: { en: 'Pass every widget into constructor', fa: 'همه ویجت‌ها را به constructor بده' },
         correct: false,
       },
       {
         id: 'polling',
-        label: {
-          en: 'Have each widget poll OrderBook on a timer instead',
-          fa: 'هر ویجت OrderBook را با تایمر poll کند',
-        },
+        label: { en: 'Widgets poll on a timer', fa: 'ویجت‌ها با تایمر poll کنند' },
         correct: false,
       },
     ],

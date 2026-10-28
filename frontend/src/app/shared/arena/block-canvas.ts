@@ -15,39 +15,57 @@ import { SettingsService } from '../../core/services/settings.service';
 import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import { LocalizePipe } from '../../core/pipes/localize.pipe';
 import { BlockChallenge, CanvasEdge, PlacedBlock } from './arena.models';
+import { ArenaIcon } from './arena-icon';
+import { PATTERN_ART } from './arena-data';
 
 @Component({
   selector: 'app-block-canvas',
-  imports: [TranslatePipe, LocalizePipe],
+  imports: [TranslatePipe, LocalizePipe, ArenaIcon],
   template: `
-    <div class="arena-block">
-      <p class="brief">{{ challenge.brief | loc }}</p>
+    <div class="arena-block" [class.won]="structureOk()">
+      <div class="mission">
+        <img class="mission__art" [src]="artUrl" alt="" width="96" height="64" />
+        <div>
+          <p class="mission__tag">
+            <app-arena-icon name="play" size="1.1rem" />
+            {{ 'arena.mission' | t }}
+          </p>
+          <p class="mission__brief">{{ challenge.brief | loc }}</p>
+        </div>
+        <div class="combo" dir="ltr">
+          <img src="/assets/arena/xp-spin.svg" alt="" width="28" height="28" />
+          <span>{{ edgeScore() }}/{{ challenge.expectedEdges.length }}</span>
+        </div>
+      </div>
 
       <div class="workspace">
-        <aside class="palette" aria-label="Piece palette">
-          <h3>{{ 'arena.palette' | t }}</h3>
+        <aside class="palette">
+          <h3>
+            <app-arena-icon name="blocks" size="1.15rem" />
+            {{ 'arena.palette' | t }}
+          </h3>
           @for (piece of challenge.pieces; track piece.id) {
             <button
               type="button"
               class="piece"
               [class.distractor]="piece.distractor"
+              [class.used]="placedCount(piece.id) > 0"
               [disabled]="placedCount(piece.id) > 0"
               (click)="addPiece(piece.id)"
               [title]="piece.hint | loc"
             >
+              <app-arena-icon [name]="piece.id" size="2.45rem" />
               <span class="piece__role">{{ piece.label | loc }}</span>
-              <span class="piece__hint">{{ piece.hint | loc }}</span>
+              @if (piece.distractor) {
+                <span class="trap">!</span>
+              }
             </button>
           }
         </aside>
 
         <div class="stage-wrap">
-          <div
-            class="stage"
-            role="application"
-            aria-label="Pattern canvas"
-            (click)="clearSelection()"
-          >
+          <div class="stage" role="application" (click)="clearSelection()">
+            <img class="stage__spark" src="/assets/arena/spark.gif.svg" alt="" />
             <svg class="wires" aria-hidden="true">
               @for (edge of edges(); track edge.id) {
                 @if (edgePath(edge); as path) {
@@ -57,9 +75,11 @@ import { BlockChallenge, CanvasEdge, PlacedBlock } from './arena.models';
                     [class.hot]="isEdgeHot(edge)"
                     [class.pulse]="animating() && isEdgeHot(edge)"
                   />
-                  <text [attr.x]="path.mx" [attr.y]="path.my" class="wire-label" dir="ltr">
-                    {{ edge.relation }}
-                  </text>
+                  <foreignObject [attr.x]="path.mx - 18" [attr.y]="path.my - 12" width="36" height="24">
+                    <div class="wire-chip" dir="ltr">
+                      <app-arena-icon [name]="edge.relation" size="0.95rem" tone="amber" />
+                    </div>
+                  </foreignObject>
                 }
               }
             </svg>
@@ -75,18 +95,32 @@ import { BlockChallenge, CanvasEdge, PlacedBlock } from './arena.models';
                 (click)="selectBlock($event, block.instanceId)"
                 (dblclick)="removeBlock($event, block.instanceId)"
               >
+                <span class="block__glow" aria-hidden="true"></span>
+                <app-arena-icon [name]="block.pieceId" size="2.45rem" />
                 <span class="block__label" dir="ltr">{{ labelOf(block.pieceId) }}</span>
-                <span class="block__sub">{{ hintOf(block.pieceId) }}</span>
               </button>
             }
 
             @if (!blocks().length) {
-              <p class="empty">{{ 'arena.canvasEmpty' | t }}</p>
+              <div class="empty">
+                <app-arena-icon name="blocks" size="2.4rem" tone="muted" />
+                <span>{{ 'arena.canvasEmpty' | t }}</span>
+              </div>
+            }
+
+            @if (structureOk()) {
+              <div class="confetti" aria-hidden="true">
+                @for (i of confetti; track i) {
+                  <span [style.--i]="i"></span>
+                }
+              </div>
+              <div class="win-stamp" aria-hidden="true">
+                <img src="/assets/arena/win-burst.svg" width="120" height="120" alt="" />
+              </div>
             }
           </div>
 
-          <div class="rel-bar" role="group" [attr.aria-label]="'arena.relations' | t">
-            <span class="rel-label">{{ 'arena.relations' | t }}</span>
+          <div class="rel-bar" role="group">
             @for (rel of challenge.relations; track rel) {
               <button
                 type="button"
@@ -95,119 +129,195 @@ import { BlockChallenge, CanvasEdge, PlacedBlock } from './arena.models';
                 (click)="activeRelation.set(rel)"
                 dir="ltr"
               >
+                <app-arena-icon [name]="rel" size="1.15rem" />
                 {{ rel }}
               </button>
             }
-            <span class="hint muted">{{ 'arena.connectHint' | t }}</span>
           </div>
         </div>
       </div>
 
       <div class="actions">
         <button type="button" class="btn ghost" (click)="reset()">{{ 'arena.reset' | t }}</button>
-        <button type="button" class="btn primary" [disabled]="busy()" (click)="validate()">
+        <button type="button" class="btn primary punch" [disabled]="busy()" (click)="validate()">
+          <app-arena-icon name="trophy" size="1.1rem" />
           {{ 'arena.validate' | t }}
         </button>
         <button
           type="button"
-          class="btn ghost"
+          class="btn ghost punch"
           [disabled]="!structureOk() || animating()"
           (click)="runAnimation()"
         >
+          <app-arena-icon name="play" size="1.1rem" />
           {{ 'arena.runFlow' | t }}
         </button>
       </div>
 
       @if (feedback()) {
         <div class="feedback" [class.ok]="structureOk()" [class.bad]="!structureOk()">
-          <p>{{ feedback() }}</p>
-          @if (xpNote()) {
-            <p class="xp" dir="ltr">{{ xpNote() }}</p>
+          @if (structureOk()) {
+            <app-arena-icon name="trophy" size="1.35rem" tone="amber" />
+          } @else {
+            <app-arena-icon name="xp" size="1.35rem" tone="muted" />
           }
+          <p>{{ feedback() }}</p>
         </div>
       }
 
       @if (animMessage()) {
-        <div class="anim-banner" dir="auto">
-          <span class="pulse-dot" aria-hidden="true"></span>
-          {{ animMessage() }}
+        <div class="anim-banner">
+          <img src="/assets/arena/spark.gif.svg" alt="" width="36" height="36" />
+          <span dir="auto">{{ animMessage() }}</span>
         </div>
       }
     </div>
   `,
   styles: [
     `
-      .brief {
-        color: var(--muted);
-        margin: 0 0 1rem;
-        max-width: 48rem;
+      .mission {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 0.85rem;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        border-radius: 1rem;
+        border: 1px solid var(--line);
+        background:
+          radial-gradient(420px 120px at 0% 0%, color-mix(in oklab, var(--accent) 16%, transparent), transparent),
+          var(--surface);
+      }
+      .mission__art {
+        image-rendering: auto;
+      }
+      .mission__tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin: 0;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .mission__brief {
+        margin: 0.2rem 0 0;
+        font-family: var(--font-display);
+        font-size: 1.05rem;
+        line-height: 1.35;
+      }
+      .combo {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-family: var(--font-mono);
+        font-weight: 600;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: color-mix(in oklab, var(--accent-2) 12%, transparent);
       }
       .workspace {
         display: grid;
-        grid-template-columns: minmax(11rem, 14rem) 1fr;
-        gap: 1rem;
+        grid-template-columns: minmax(7.5rem, 9.5rem) 1fr;
+        gap: 0.85rem;
       }
       @media (max-width: 820px) {
         .workspace {
           grid-template-columns: 1fr;
         }
+        .mission {
+          grid-template-columns: auto 1fr;
+        }
+        .combo {
+          grid-column: 1 / -1;
+          justify-self: start;
+        }
       }
       .palette h3 {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
         font-family: var(--font-display);
-        font-size: 0.95rem;
-        margin: 0 0 0.6rem;
+        font-size: 0.92rem;
+        margin: 0 0 0.55rem;
       }
       .piece {
+        position: relative;
         display: grid;
-        gap: 0.15rem;
+        justify-items: center;
+        gap: 0.3rem;
         width: 100%;
-        text-align: start;
-        margin-bottom: 0.45rem;
-        padding: 0.65rem 0.75rem;
-        border-radius: 0.55rem;
+        margin-bottom: 0.5rem;
+        padding: 0.75rem 0.4rem 0.55rem;
+        border-radius: 1rem;
         border: 1px solid var(--line);
-        background: color-mix(in oklab, var(--surface) 90%, transparent);
+        background:
+          url('/assets/arena/tile-glow.svg') center / cover no-repeat,
+          linear-gradient(160deg, color-mix(in oklab, var(--surface) 70%, var(--accent)), var(--surface));
         color: inherit;
         cursor: pointer;
-        transition: border-color 160ms ease, transform 160ms ease;
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
       }
       .piece:hover:not(:disabled) {
+        transform: translateY(-3px) scale(1.03);
         border-color: var(--accent);
-        transform: translateY(-1px);
+        box-shadow: 0 10px 22px color-mix(in oklab, var(--accent) 18%, transparent);
       }
-      .piece:disabled {
-        opacity: 0.45;
-        cursor: default;
+      .piece.used {
+        opacity: 0.4;
+        filter: grayscale(0.4);
       }
       .piece.distractor {
         border-style: dashed;
-        opacity: 0.75;
       }
       .piece__role {
         font-family: var(--font-mono);
-        font-size: 0.85rem;
-        font-weight: 500;
+        font-size: 0.68rem;
+        text-align: center;
+        line-height: 1.2;
       }
-      .piece__hint {
-        font-size: 0.72rem;
-        color: var(--muted);
+      .trap {
+        position: absolute;
+        top: 0.25rem;
+        inset-inline-end: 0.35rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        background: var(--accent-2);
+        color: #fff7ed;
+        font-size: 0.7rem;
+        font-weight: 700;
+        display: grid;
+        place-items: center;
       }
       .stage-wrap {
         display: grid;
-        gap: 0.65rem;
+        gap: 0.55rem;
       }
       .stage {
         position: relative;
-        min-height: 360px;
-        border-radius: 0.9rem;
+        min-height: 380px;
+        border-radius: 1.1rem;
         border: 1px solid var(--line);
-        background:
-          linear-gradient(color-mix(in oklab, var(--line) 55%, transparent) 1px, transparent 1px) 0 0 /
-            24px 24px,
-          linear-gradient(90deg, color-mix(in oklab, var(--line) 55%, transparent) 1px, transparent 1px)
-            0 0 / 24px 24px,
-          color-mix(in oklab, var(--surface) 92%, transparent);
         overflow: hidden;
+        background:
+          radial-gradient(circle at 20% 20%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 40%),
+          radial-gradient(circle at 80% 10%, color-mix(in oklab, var(--accent-2) 12%, transparent), transparent 35%),
+          linear-gradient(color-mix(in oklab, var(--line) 50%, transparent) 1px, transparent 1px) 0 0 / 28px 28px,
+          linear-gradient(90deg, color-mix(in oklab, var(--line) 50%, transparent) 1px, transparent 1px) 0 0 / 28px 28px,
+          color-mix(in oklab, var(--surface) 94%, transparent);
+      }
+      .stage__spark {
+        position: absolute;
+        top: 0.6rem;
+        inset-inline-end: 0.6rem;
+        width: 42px;
+        height: 42px;
+        opacity: 0.55;
+        pointer-events: none;
+        z-index: 1;
       }
       .wires {
         position: absolute;
@@ -218,89 +328,100 @@ import { BlockChallenge, CanvasEdge, PlacedBlock } from './arena.models';
       }
       .wire {
         fill: none;
-        stroke: color-mix(in oklab, var(--accent) 55%, var(--muted));
-        stroke-width: 2;
+        stroke: color-mix(in oklab, var(--accent) 60%, var(--muted));
+        stroke-width: 2.4;
         stroke-linecap: round;
       }
       .wire.hot {
         stroke: var(--accent-2);
-        stroke-width: 2.5;
+        stroke-width: 3;
       }
       .wire.pulse {
-        stroke-dasharray: 6 4;
-        animation: dash 900ms linear infinite;
+        stroke-dasharray: 7 5;
+        animation: dash 800ms linear infinite;
       }
-      .wire-label {
-        fill: var(--muted);
-        font-size: 10px;
-        font-family: var(--font-mono);
-        text-anchor: middle;
+      .wire-chip {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 24px;
+        border-radius: 999px;
+        background: color-mix(in oklab, var(--surface) 88%, transparent);
+        border: 1px solid var(--line);
       }
       .block {
         position: absolute;
-        width: 148px;
-        padding: 0.7rem 0.75rem;
-        border-radius: 0.55rem;
+        width: 124px;
+        padding: 0.7rem 0.5rem 0.55rem;
+        border-radius: 1rem;
         border: 1px solid var(--line);
-        background: linear-gradient(
-          160deg,
-          color-mix(in oklab, var(--surface) 96%, var(--accent)),
-          var(--surface)
-        );
+        background: linear-gradient(165deg, color-mix(in oklab, var(--surface) 55%, var(--accent)), var(--surface));
         color: inherit;
-        text-align: start;
         cursor: pointer;
-        box-shadow: 0 8px 22px color-mix(in oklab, #0b1c16 8%, transparent);
-        transition: border-color 160ms ease, box-shadow 200ms ease, transform 200ms ease;
+        display: grid;
+        justify-items: center;
+        gap: 0.3rem;
+        box-shadow: 0 10px 24px color-mix(in oklab, #0b1c16 10%, transparent);
+        transition: transform 180ms ease, box-shadow 180ms ease, border-color 160ms ease;
         z-index: 2;
+        animation: pop 280ms ease both;
+        overflow: hidden;
+      }
+      .block__glow {
+        position: absolute;
+        inset: -20%;
+        background: radial-gradient(circle at 30% 20%, color-mix(in oklab, var(--accent-2) 28%, transparent), transparent 55%);
+        pointer-events: none;
+      }
+      .win-stamp {
+        position: absolute;
+        right: 1rem;
+        bottom: 1rem;
+        z-index: 6;
+        animation: pop 420ms ease both;
+        filter: drop-shadow(0 10px 24px color-mix(in oklab, var(--accent-2) 40%, transparent));
+        pointer-events: none;
       }
       .block.selected {
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent);
+        box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 25%, transparent);
       }
       .block.hot {
         border-color: var(--accent-2);
-        transform: translateY(-3px) scale(1.03);
-        box-shadow: 0 12px 28px color-mix(in oklab, var(--accent-2) 28%, transparent);
+        transform: translateY(-4px) scale(1.06);
+        box-shadow: 0 14px 30px color-mix(in oklab, var(--accent-2) 30%, transparent);
       }
       .block__label {
-        display: block;
         font-family: var(--font-mono);
+        font-size: 0.72rem;
         font-weight: 500;
-        font-size: 0.88rem;
-      }
-      .block__sub {
-        display: block;
-        font-size: 0.68rem;
-        color: var(--muted);
-        margin-top: 0.2rem;
-        line-height: 1.3;
+        text-align: center;
+        line-height: 1.2;
       }
       .empty {
         position: absolute;
         inset: 0;
         display: grid;
-        place-items: center;
+        place-content: center;
+        justify-items: center;
+        gap: 0.45rem;
         color: var(--muted);
-        margin: 0;
         pointer-events: none;
+        font-size: 0.9rem;
       }
       .rel-bar {
         display: flex;
         flex-wrap: wrap;
         gap: 0.4rem;
-        align-items: center;
-      }
-      .rel-label {
-        font-size: 0.8rem;
-        color: var(--muted);
-        margin-inline-end: 0.25rem;
       }
       .rel {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
         font-family: var(--font-mono);
         font-size: 0.78rem;
-        padding: 0.35rem 0.65rem;
-        border-radius: 0.45rem;
+        padding: 0.4rem 0.7rem;
+        border-radius: 999px;
         border: 1px solid var(--line);
         background: transparent;
         color: inherit;
@@ -308,63 +429,100 @@ import { BlockChallenge, CanvasEdge, PlacedBlock } from './arena.models';
       }
       .rel.active {
         border-color: var(--accent);
-        background: color-mix(in oklab, var(--accent) 14%, transparent);
-        color: var(--ink);
-      }
-      .hint {
-        font-size: 0.78rem;
-        margin-inline-start: 0.35rem;
+        background: color-mix(in oklab, var(--accent) 16%, transparent);
       }
       .actions {
         display: flex;
         flex-wrap: wrap;
         gap: 0.55rem;
-        margin-top: 1rem;
+        margin-top: 0.95rem;
+      }
+      .punch {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
       }
       .feedback {
-        margin-top: 0.9rem;
-        padding: 0.85rem 1rem;
-        border-radius: 0.7rem;
+        margin-top: 0.85rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.85rem;
         border: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+      }
+      .feedback p {
+        margin: 0;
+        font-family: var(--font-display);
       }
       .feedback.ok {
         border-color: color-mix(in oklab, #2f9e7b 50%, var(--line));
+        background: color-mix(in oklab, var(--accent) 10%, var(--surface));
       }
       .feedback.bad {
         border-color: color-mix(in oklab, #c45c4a 50%, var(--line));
       }
-      .xp {
-        font-family: var(--font-mono);
-        color: var(--accent);
-        margin: 0.35rem 0 0;
-      }
       .anim-banner {
-        margin-top: 0.85rem;
+        margin-top: 0.75rem;
         display: flex;
         align-items: center;
         gap: 0.55rem;
-        padding: 0.75rem 1rem;
-        border-radius: 0.7rem;
-        background: color-mix(in oklab, var(--accent-2) 12%, var(--surface));
-        border: 1px solid color-mix(in oklab, var(--accent-2) 35%, var(--line));
-        animation: rise 400ms ease both;
+        padding: 0.7rem 0.95rem;
+        border-radius: 0.85rem;
+        background: color-mix(in oklab, var(--accent-2) 14%, var(--surface));
+        border: 1px solid color-mix(in oklab, var(--accent-2) 40%, var(--line));
+        font-family: var(--font-display);
+        animation: rise 350ms ease both;
       }
-      .pulse-dot {
-        width: 0.55rem;
-        height: 0.55rem;
-        border-radius: 50%;
+      .confetti {
+        pointer-events: none;
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        z-index: 5;
+      }
+      .confetti span {
+        position: absolute;
+        top: -8px;
+        left: calc(8% + (var(--i) * 7%));
+        width: 8px;
+        height: 12px;
+        border-radius: 2px;
         background: var(--accent-2);
-        animation: blink 900ms ease infinite;
-        flex-shrink: 0;
+        animation: fall calc(1.2s + var(--i) * 0.08s) ease-in forwards;
+        animation-delay: calc(var(--i) * 30ms);
+      }
+      .confetti span:nth-child(3n) {
+        background: var(--accent);
+      }
+      .confetti span:nth-child(4n) {
+        background: #fbbf24;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+      }
+      .won .stage {
+        box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--accent) 35%, transparent);
       }
       @keyframes dash {
         to {
-          stroke-dashoffset: -20;
+          stroke-dashoffset: -24;
         }
       }
-      @keyframes blink {
-        50% {
-          opacity: 0.35;
+      @keyframes pop {
+        from {
+          transform: scale(0.85);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      @keyframes fall {
+        to {
+          transform: translateY(390px) rotate(220deg);
+          opacity: 0;
         }
       }
     `,
@@ -383,24 +541,37 @@ export class BlockCanvas implements OnChanges, OnDestroy {
   readonly activeRelation = signal<ArenaRelation>('extends');
   readonly structureOk = signal(false);
   readonly feedback = signal('');
-  readonly xpNote = signal('');
   readonly busy = signal(false);
   readonly animating = signal(false);
   readonly animMessage = signal('');
   readonly hotPieceIds = signal<Set<string>>(new Set());
   readonly hotEdgeIds = signal<Set<string>>(new Set());
+  readonly confetti = Array.from({ length: 14 }, (_, i) => i);
 
   private animTimer: ReturnType<typeof setTimeout> | null = null;
   private placeIndex = 0;
 
+  get artUrl(): string {
+    return PATTERN_ART[this.challenge.patternId] ?? '/assets/arena/spark.gif.svg';
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['challenge']) {
-      this.reset();
-    }
+    if (changes['challenge']) this.reset();
   }
 
   ngOnDestroy(): void {
     this.clearAnimTimer();
+  }
+
+  edgeScore(): number {
+    const edgeKeys = this.edges().map((e) => {
+      const from = this.pieceIdOf(e.fromInstanceId);
+      const to = this.pieceIdOf(e.toInstanceId);
+      return `${from}>${e.relation}>${to}`;
+    });
+    return this.challenge.expectedEdges.filter((expected) =>
+      edgeKeys.includes(`${expected.from}>${expected.relation}>${expected.to}`)
+    ).length;
   }
 
   placedCount(pieceId: string): number {
@@ -415,11 +586,10 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     const instanceId = `${pieceId}-${crypto.randomUUID().slice(0, 8)}`;
     this.blocks.update((list) => [
       ...list,
-      { instanceId, pieceId, x: 28 + col * 170, y: 28 + row * 110 },
+      { instanceId, pieceId, x: 36 + col * 150, y: 36 + row * 120 },
     ]);
     this.structureOk.set(false);
     this.feedback.set('');
-    this.xpNote.set('');
   }
 
   selectBlock(event: MouseEvent, instanceId: string): void {
@@ -471,25 +641,17 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     this.selectedId.set(null);
     this.structureOk.set(false);
     this.feedback.set('');
-    this.xpNote.set('');
     this.animMessage.set('');
     this.hotPieceIds.set(new Set());
     this.hotEdgeIds.set(new Set());
     this.animating.set(false);
     this.placeIndex = 0;
-    if (this.challenge.relations.length) {
-      this.activeRelation.set(this.challenge.relations[0]);
-    }
+    if (this.challenge.relations.length) this.activeRelation.set(this.challenge.relations[0]);
   }
 
   labelOf(pieceId: string): string {
     const p = this.challenge.pieces.find((x) => x.id === pieceId);
     return p ? this.i18n.localize(p.label) : pieceId;
-  }
-
-  hintOf(pieceId: string): string {
-    const p = this.challenge.pieces.find((x) => x.id === pieceId);
-    return p ? this.i18n.localize(p.hint) : '';
   }
 
   pieceIdOf(instanceId: string): string {
@@ -500,14 +662,14 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     const from = this.blocks().find((b) => b.instanceId === edge.fromInstanceId);
     const to = this.blocks().find((b) => b.instanceId === edge.toInstanceId);
     if (!from || !to) return null;
-    const x1 = from.x + 74;
-    const y1 = from.y + 36;
-    const x2 = to.x + 74;
-    const y2 = to.y + 36;
+    const x1 = from.x + 59;
+    const y1 = from.y + 40;
+    const x2 = to.x + 59;
+    const y2 = to.y + 40;
     const mx = (x1 + x2) / 2;
-    const my = (y1 + y2) / 2 - 6;
+    const my = (y1 + y2) / 2 - 4;
     const cx = (x1 + x2) / 2;
-    const cy = Math.min(y1, y2) - 24;
+    const cy = Math.min(y1, y2) - 28;
     return { d: `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`, mx, my };
   }
 
@@ -522,21 +684,17 @@ export class BlockCanvas implements OnChanges, OnDestroy {
       this.structureOk.set(result.ok);
       this.feedback.set(result.message);
       this.cleared.emit({ score: result.score, passed: result.ok });
-      if (result.ok) {
-        this.xpNote.set('');
-      }
     } finally {
       this.busy.set(false);
     }
   }
 
   runAnimation(): void {
-    if (!this.structureOk() || this.settings.settings().reduceMotion) {
-      if (this.settings.settings().reduceMotion) {
-        const last = this.challenge.animation[this.challenge.animation.length - 1];
-        this.animMessage.set(last ? this.i18n.localize(last.message) : '');
-        this.hotPieceIds.set(new Set(last?.pieceIds ?? []));
-      }
+    if (!this.structureOk()) return;
+    if (this.settings.settings().reduceMotion) {
+      const last = this.challenge.animation[this.challenge.animation.length - 1];
+      this.animMessage.set(last ? this.i18n.localize(last.message) : '');
+      this.hotPieceIds.set(new Set(last?.pieceIds ?? []));
       return;
     }
     this.clearAnimTimer();
@@ -562,7 +720,7 @@ export class BlockCanvas implements OnChanges, OnDestroy {
       this.hotEdgeIds.set(new Set(hotEdges));
       this.animMessage.set(this.i18n.localize(current.message));
       step += 1;
-      this.animTimer = setTimeout(tick, 1400);
+      this.animTimer = setTimeout(tick, 1200);
     };
     tick();
   }
@@ -571,34 +729,22 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     const placed = new Set(this.blocks().map((b) => b.pieceId));
     const distractors = this.challenge.pieces.filter((p) => p.distractor).map((p) => p.id);
     if (distractors.some((d) => placed.has(d))) {
-      return {
-        ok: false,
-        score: 20,
-        message: this.i18n.t('arena.feedback.distractor'),
-      };
+      return { ok: false, score: 20, message: this.i18n.t('arena.feedback.distractor') };
     }
     for (const id of this.challenge.requiredPieceIds) {
       if (!placed.has(id)) {
-        return {
-          ok: false,
-          score: 35,
-          message: this.i18n.t('arena.feedback.missingRole'),
-        };
+        return { ok: false, score: 35, message: this.i18n.t('arena.feedback.missingRole') };
       }
     }
-
     const edgeKeys = this.edges().map((e) => {
       const from = this.pieceIdOf(e.fromInstanceId);
       const to = this.pieceIdOf(e.toInstanceId);
       return `${from}>${e.relation}>${to}`;
     });
-
     let matched = 0;
     for (const expected of this.challenge.expectedEdges) {
-      const key = `${expected.from}>${expected.relation}>${expected.to}`;
-      if (edgeKeys.includes(key)) matched += 1;
+      if (edgeKeys.includes(`${expected.from}>${expected.relation}>${expected.to}`)) matched += 1;
     }
-
     if (matched < this.challenge.expectedEdges.length) {
       return {
         ok: false,
@@ -609,12 +755,7 @@ export class BlockCanvas implements OnChanges, OnDestroy {
         }),
       };
     }
-
-    return {
-      ok: true,
-      score: 100,
-      message: this.i18n.t('arena.feedback.ok'),
-    };
+    return { ok: true, score: 100, message: this.i18n.t('arena.feedback.ok') };
   }
 
   private clearAnimTimer(): void {

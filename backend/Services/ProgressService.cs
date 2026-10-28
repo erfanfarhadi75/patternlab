@@ -155,8 +155,8 @@ public sealed class ProgressService : IProgressService
             {
                 feedback = new Dictionary<string, string>
                 {
-                    ["en"] = "Structure not quite right yet — adjust the blocks and try again.",
-                    ["fa"] = "ساختار هنوز دقیق نیست — قطعات را تنظیم کنید و دوباره تلاش کنید."
+                    ["en"] = "Not yet — rewire and retry.",
+                    ["fa"] = "هنوز نه — دوباره سیم‌کشی کن."
                 };
                 Save(store.With(progress));
                 return new CompleteArenaResponse(false, 0, ToSnapshot(progress), feedback);
@@ -173,16 +173,16 @@ public sealed class ProgressService : IProgressService
                 MaybeUnlock(progress);
                 feedback = new Dictionary<string, string>
                 {
-                    ["en"] = $"Arena cleared. Pattern structure holds. +{xp} XP.",
-                    ["fa"] = $"زمین تمرین پاک شد. ساختار الگو درست است. +{xp} امتیاز."
+                    ["en"] = $"CLEAR! +{xp} XP",
+                    ["fa"] = $"پاک شد! +{xp} امتیاز"
                 };
             }
             else
             {
                 feedback = new Dictionary<string, string>
                 {
-                    ["en"] = "Already cleared — no extra XP, but the run still counts for practice.",
-                    ["fa"] = "قبلاً پاک شده — امتیاز اضافه نیست، ولی تمرین حساب می‌شود."
+                    ["en"] = "Already cleared — practice only.",
+                    ["fa"] = "قبلاً پاک شده — فقط تمرین."
                 };
             }
 

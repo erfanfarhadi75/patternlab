@@ -2,24 +2,25 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { ArenaMode, PatternSummaryDto } from '../../core/models/models';
+import { ArenaMode, PatternDetailDto, PatternSummaryDto } from '../../core/models/models';
 import { ApiService } from '../../core/services/api.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { ProgressStoreService } from '../../core/services/progress-store.service';
+import { SettingsService } from '../../core/services/settings.service';
 import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import { LocalizePipe } from '../../core/pipes/localize.pipe';
 import { QuizPanel } from '../../shared/quiz-panel';
 import { BlockCanvas } from '../../shared/arena/block-canvas';
 import { CodeMode } from '../../shared/arena/code-mode';
 import { RefactorMode } from '../../shared/arena/refactor-mode';
+import { ArenaIcon } from '../../shared/arena/arena-icon';
 import {
   ARENA_PATTERN_IDS,
   BLOCK_CHALLENGES,
   CODE_CHALLENGES,
+  PATTERN_ART,
   REFACTOR_CHALLENGES,
 } from '../../shared/arena/arena-data';
-import { PatternDetailDto } from '../../core/models/models';
-import { SettingsService } from '../../core/services/settings.service';
 
 @Component({
   selector: 'app-practice',
@@ -32,12 +33,29 @@ import { SettingsService } from '../../core/services/settings.service';
     BlockCanvas,
     CodeMode,
     RefactorMode,
+    ArenaIcon,
   ],
   template: `
-    <header class="page-head">
-      <p class="eyebrow">{{ 'arena.eyebrow' | t }}</p>
-      <h1>{{ 'practice.title' | t }}</h1>
-      <p>{{ 'practice.subtitle' | t }}</p>
+    <header class="hud">
+      <div class="hud__art">
+        <img class="hud__banner" [src]="bannerArt()" alt="" width="140" height="92" />
+        <img class="hud__spark" src="/assets/arena/spark.gif.svg" alt="" width="48" height="48" />
+      </div>
+      <div class="hud__text">
+        <p class="eyebrow">
+          <app-arena-icon name="play" size="1rem" />
+          {{ 'arena.eyebrow' | t }}
+        </p>
+        <h1>{{ 'practice.title' | t }}</h1>
+        <p class="sub">{{ 'practice.subtitle' | t }}</p>
+      </div>
+      <div class="hud__xp" dir="ltr">
+        <img src="/assets/arena/xp-spin.svg" width="32" height="32" alt="" />
+        <div>
+          <strong>{{ progress.progress()?.xp ?? 0 }}</strong>
+          <span>XP</span>
+        </div>
+      </div>
     </header>
 
     <div class="controls">
@@ -59,9 +77,10 @@ import { SettingsService } from '../../core/services/settings.service';
             [attr.aria-selected]="mode() === m"
             (click)="setMode(m)"
           >
+            <app-arena-icon [name]="m" size="1.15rem" />
             {{ ('arena.mode.' + m) | t }}
             @if (m !== 'quiz' && cleared(m)) {
-              <span class="dot" title="cleared"></span>
+              <app-arena-icon name="trophy" size="0.9rem" tone="amber" />
             }
           </button>
         }
@@ -73,13 +92,11 @@ import { SettingsService } from '../../core/services/settings.service';
     } @else if (!detail()) {
       <p class="muted">{{ 'practice.empty' | t }}</p>
     } @else {
-      <p class="level-line">
-        {{ detail()!.name | loc }} · {{ ('level.' + level()) | t }}
-        @if (mode() !== 'quiz') {
-          <span class="sep">·</span>
-          <span>{{ 'arena.xpHint' | t }}</span>
-        }
-      </p>
+      <div class="stage-label">
+        <app-arena-icon [name]="selectedId()" size="1.35rem" />
+        <span>{{ detail()!.name | loc }}</span>
+        <span class="pill">{{ ('level.' + level()) | t }}</span>
+      </div>
 
       @switch (mode()) {
         @case ('blocks') {
@@ -112,11 +129,17 @@ import { SettingsService } from '../../core/services/settings.service';
       }
 
       @if (toast()) {
-        <div class="toast" role="status">{{ toast() }}</div>
+        <div class="toast" role="status">
+          <img src="/assets/arena/xp-spin.svg" width="24" height="24" alt="" />
+          {{ toast() }}
+        </div>
       }
 
       <p class="learn-link">
-        <a [routerLink]="['/patterns', selectedId()]">{{ 'arena.backToLearn' | t }}</a>
+        <a [routerLink]="['/patterns', selectedId()]">
+          <app-arena-icon name="quiz" size="1rem" />
+          {{ 'arena.backToLearn' | t }}
+        </a>
       </p>
     }
   `,
@@ -126,38 +149,93 @@ import { SettingsService } from '../../core/services/settings.service';
         display: block;
         max-width: 1120px;
       }
-      .page-head .eyebrow {
+      .hud {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.95rem 1.1rem;
+        border-radius: 1.2rem;
+        border: 1px solid var(--line);
+        background:
+          radial-gradient(600px 180px at 10% 0%, color-mix(in oklab, var(--accent) 18%, transparent), transparent),
+          radial-gradient(420px 160px at 100% 0%, color-mix(in oklab, var(--accent-2) 16%, transparent), transparent),
+          var(--surface);
+        margin-bottom: 1.1rem;
+        animation: rise 500ms ease both;
+      }
+      .hud__art {
+        position: relative;
+        width: 140px;
+        height: 92px;
+      }
+      .hud__banner {
+        filter: drop-shadow(0 10px 18px color-mix(in oklab, var(--accent) 22%, transparent));
+      }
+      .hud__spark {
+        position: absolute;
+        inset-inline-end: -8px;
+        top: -8px;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
         margin: 0;
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--accent);
       }
-      .page-head h1 {
+      h1 {
         font-family: var(--font-display);
-        font-size: clamp(1.9rem, 4vw, 2.6rem);
-        margin: 0.25rem 0 0.4rem;
+        font-size: clamp(1.7rem, 3.5vw, 2.3rem);
+        margin: 0.15rem 0;
         letter-spacing: -0.03em;
       }
-      .page-head p {
+      .sub {
+        margin: 0;
         color: var(--muted);
-        max-width: 40rem;
+        max-width: 28rem;
+        font-size: 0.95rem;
+      }
+      .hud__xp {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.45rem 0.75rem;
+        border-radius: 1rem;
+        border: 1px solid var(--line);
+        background: color-mix(in oklab, var(--accent-2) 12%, transparent);
+      }
+      .hud__xp strong {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 1.15rem;
+        line-height: 1;
+      }
+      .hud__xp span {
+        font-size: 0.7rem;
+        color: var(--muted);
+        letter-spacing: 0.06em;
       }
       .controls {
         display: flex;
         flex-wrap: wrap;
-        gap: 1rem 1.5rem;
+        gap: 1rem 1.4rem;
         align-items: end;
-        margin: 1.25rem 0 0.75rem;
+        margin-bottom: 0.85rem;
       }
       .picker {
         display: grid;
-        gap: 0.35rem;
-        min-width: 14rem;
+        gap: 0.3rem;
+        min-width: 13rem;
+        font-size: 0.85rem;
+        color: var(--muted);
       }
       select {
-        padding: 0.7rem 0.8rem;
-        border-radius: 0.7rem;
+        padding: 0.65rem 0.75rem;
+        border-radius: 0.75rem;
         border: 1px solid var(--line);
         background: var(--surface);
         color: inherit;
@@ -165,60 +243,71 @@ import { SettingsService } from '../../core/services/settings.service';
       .modes {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.35rem;
+        gap: 0.4rem;
       }
       .modes button {
-        position: relative;
-        padding: 0.55rem 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.5rem 0.85rem;
         border-radius: 999px;
         border: 1px solid var(--line);
         background: transparent;
         color: var(--muted);
         cursor: pointer;
         font: inherit;
-        font-size: 0.9rem;
+        font-size: 0.88rem;
       }
       .modes button.active {
         color: var(--ink);
         border-color: var(--accent);
-        background: color-mix(in oklab, var(--accent) 12%, transparent);
+        background: color-mix(in oklab, var(--accent) 14%, transparent);
+        box-shadow: 0 6px 16px color-mix(in oklab, var(--accent) 16%, transparent);
       }
-      .dot {
-        display: inline-block;
-        width: 0.4rem;
-        height: 0.4rem;
-        margin-inline-start: 0.35rem;
-        border-radius: 50%;
-        background: var(--accent);
-        vertical-align: middle;
-      }
-      .level-line {
-        color: var(--accent);
+      .stage-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 0.85rem;
         font-family: var(--font-mono);
-        font-size: 0.85rem;
-        margin-bottom: 1rem;
+        font-size: 0.88rem;
       }
-      .sep {
-        margin: 0 0.35rem;
-        opacity: 0.5;
+      .pill {
+        padding: 0.15rem 0.5rem;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        color: var(--accent);
+        font-size: 0.75rem;
       }
       .toast {
         position: sticky;
         bottom: 1rem;
         margin-top: 1rem;
-        padding: 0.75rem 1rem;
-        border-radius: 0.7rem;
+        padding: 0.7rem 1rem;
+        border-radius: 0.85rem;
         background: color-mix(in oklab, var(--accent) 16%, var(--surface));
         border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--line));
         animation: rise 350ms ease both;
         font-family: var(--font-mono);
         font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
       }
       .learn-link {
-        margin-top: 1.5rem;
+        margin-top: 1.4rem;
       }
       .learn-link a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
         color: var(--accent);
+        text-decoration: none;
+      }
+      @media (max-width: 720px) {
+        .hud {
+          grid-template-columns: 1fr;
+        }
       }
     `,
   ],
@@ -250,6 +339,10 @@ export class PracticePage implements OnInit {
   readonly codeChallenge = computed(() => CODE_CHALLENGES[this.selectedId()] ?? null);
   readonly refactorChallenge = computed(() => REFACTOR_CHALLENGES[this.selectedId()] ?? null);
 
+  bannerArt(): string {
+    return PATTERN_ART[this.selectedId()] ?? '/assets/arena/spark.gif.svg';
+  }
+
   async ngOnInit(): Promise<void> {
     await this.progress.refresh();
     const catalog = await firstValueFrom(this.api.getCatalog());
@@ -263,12 +356,9 @@ export class PracticePage implements OnInit {
     const initial =
       qPattern && this.summaries().some((p) => p.id === qPattern)
         ? qPattern
-        : this.summaries()[0]?.id ?? 'factory-method';
+        : (this.summaries()[0]?.id ?? 'factory-method');
 
-    if (qMode && this.modes.includes(qMode)) {
-      this.mode.set(qMode);
-    }
-
+    if (qMode && this.modes.includes(qMode)) this.mode.set(qMode);
     this.selectedId.set(initial);
     await this.select(initial);
   }
