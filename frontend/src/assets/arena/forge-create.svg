@@ -8,21 +8,22 @@
     <animate attributeName="stroke-dasharray" values="0 20;20 0" dur="1s" repeatCount="indefinite"/>
   </path>
 
-  <!-- Product box; checkmark dead-centered on box midpoint (72, 32) -->
+  <!-- Product box at (58,20) 28×24 — center (72,32) -->
   <g>
     <animateTransform attributeName="transform" type="translate" values="0 2;0 0;0 2" dur="1.2s" repeatCount="indefinite"/>
     <rect x="58" y="20" width="28" height="24" rx="6" fill="#f59e0b">
       <animate attributeName="opacity" values="0.65;1;0.65" dur="1.2s" repeatCount="indefinite"/>
     </rect>
-    <text
-      x="72"
-      y="32"
-      text-anchor="middle"
-      dominant-baseline="central"
-      fill="#fff7ed"
-      font-size="15"
-      font-family="IBM Plex Sans, Segoe UI Symbol, Arial, sans-serif"
-      font-weight="700"
-    >✓</text>
+    <!-- check drawn around box center -->
+    <g transform="translate(72 32)">
+      <path
+        d="M-6.2 0.2 L-1.6 4.8 L7.2 -5.2"
+        fill="none"
+        stroke="#fff7ed"
+        stroke-width="2.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </g>
   </g>
 </svg>
