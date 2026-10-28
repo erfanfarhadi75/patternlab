@@ -459,7 +459,7 @@ interface MoveDrag {
       }
       .stage {
         position: relative;
-        min-height: 540px;
+        min-height: 400px;
         border-radius: 1.1rem;
         border: 1px solid var(--line);
         overflow: hidden;
@@ -1077,27 +1077,23 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     const toCy = to.y + this.blockH / 2;
     const dx = toCx - fromCx;
     const dy = toCy - fromCy;
-    // Prefer vertical for near-diagonal parent/child links (extends/implements).
-    const horizontal = Math.abs(dx) > Math.abs(dy) * 1.15;
 
-    // Anchor on facing sides; for downward/level horizontals dock on the
-    // bottom of the target so notify rails stay under implements.
+    // Dock on facing sides so curves don't cut through the tiles.
     let x1: number;
     let y1: number;
     let x2: number;
     let y2: number;
-    if (horizontal) {
-      const dockBottom = dy >= -this.blockH * 0.25;
+    if (Math.abs(dx) >= Math.abs(dy)) {
       if (dx >= 0) {
         x1 = from.x + this.blockW;
         y1 = fromCy;
-        x2 = dockBottom ? toCx : to.x;
-        y2 = dockBottom ? to.y + this.blockH : toCy;
+        x2 = to.x;
+        y2 = toCy;
       } else {
         x1 = from.x;
         y1 = fromCy;
-        x2 = dockBottom ? toCx : to.x + this.blockW;
-        y2 = dockBottom ? to.y + this.blockH : toCy;
+        x2 = to.x + this.blockW;
+        y2 = toCy;
       }
     } else if (dy >= 0) {
       x1 = fromCx;
@@ -1111,53 +1107,48 @@ export class BlockCanvas implements OnChanges, OnDestroy {
       y2 = to.y + this.blockH;
     }
 
-    const fan = this.edgeFan(edge, horizontal);
+    const fan = this.edgeFan(edge);
     const midX = (x1 + x2) / 2;
     const midY = (y1 + y2) / 2;
-
-    if (horizontal) {
-      // Orthogonal U under both tiles — rails can't cut through a middle
-      // block or cross the vertical implements above.
-      const railY = Math.max(from.y, to.y) + this.blockH + 14 + (fan + 1) * 14;
-      const dropX = x1 + fan * 18;
-      const d = `M ${x1} ${y1} L ${dropX} ${y1} L ${dropX} ${railY} L ${x2} ${railY} L ${x2} ${y2}`;
-      return { d, mx: midX, my: railY };
-    }
-
-    // Fan vertical siblings apart horizontally (e.g. two implements to Observer).
-    const cx = midX + fan * 48;
-    const cy = midY;
+    const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+    // Perpendicular unit vector — light bow; default arches “above” the chord.
+    const nx = -(y2 - y1) / len;
+    const ny = (x2 - x1) / len;
+    const bow = 16 + Math.abs(fan) * 18;
+    const side = fan !== 0 ? Math.sign(fan) : -1;
+    const cx = midX + nx * bow * side;
+    const cy = midY + ny * bow * side;
     const mx = (x1 + 2 * cx + x2) / 4;
     const my = (y1 + 2 * cy + y2) / 4;
     return { d: `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`, mx, my };
   }
 
-  /** Spread wires that share a source or target so their curves don't stack. */
-  private edgeFan(edge: CanvasEdge, horizontal: boolean): number {
+  /** Spread sibling curves (same source or target, same axis) so they don't stack. */
+  private edgeFan(edge: CanvasEdge): number {
+    const from = this.blocks().find((b) => b.instanceId === edge.fromInstanceId);
+    const to = this.blocks().find((b) => b.instanceId === edge.toInstanceId);
+    if (!from || !to) return 0;
+    const horiz = Math.abs(to.x - from.x) >= Math.abs(to.y - from.y);
+
     const group = this.edges().filter((e) => {
       if (e.id === edge.id) return true;
-      const sharesFrom = e.fromInstanceId === edge.fromInstanceId;
-      const sharesTo = e.toInstanceId === edge.toInstanceId;
-      if (!sharesFrom && !sharesTo) return false;
+      if (
+        e.fromInstanceId !== edge.fromInstanceId &&
+        e.toInstanceId !== edge.toInstanceId
+      ) {
+        return false;
+      }
       const a = this.blocks().find((b) => b.instanceId === e.fromInstanceId);
       const b = this.blocks().find((blk) => blk.instanceId === e.toInstanceId);
       if (!a || !b) return false;
-      const adx = b.x + this.blockW / 2 - (a.x + this.blockW / 2);
-      const ady = b.y + this.blockH / 2 - (a.y + this.blockH / 2);
-      const eHorizontal = Math.abs(adx) > Math.abs(ady) * 1.15;
-      return eHorizontal === horizontal;
+      const eHoriz = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
+      return eHoriz === horiz;
     });
     if (group.length <= 1) return 0;
-    // Order by destination (or source) position so fans stay visually stable.
     const sorted = [...group].sort((a, b) => {
       const aTo = this.blocks().find((blk) => blk.instanceId === a.toInstanceId);
       const bTo = this.blocks().find((blk) => blk.instanceId === b.toInstanceId);
-      const aFrom = this.blocks().find((blk) => blk.instanceId === a.fromInstanceId);
-      const bFrom = this.blocks().find((blk) => blk.instanceId === b.fromInstanceId);
-      if (horizontal) {
-        return (aTo?.x ?? 0) - (bTo?.x ?? 0) || (aFrom?.y ?? 0) - (bFrom?.y ?? 0);
-      }
-      return (aFrom?.x ?? 0) - (bFrom?.x ?? 0) || (aTo?.x ?? 0) - (bTo?.x ?? 0);
+      return (aTo?.y ?? 0) - (bTo?.y ?? 0) || (aTo?.x ?? 0) - (bTo?.x ?? 0);
     });
     const index = sorted.findIndex((e) => e.id === edge.id);
     return index - (sorted.length - 1) / 2;

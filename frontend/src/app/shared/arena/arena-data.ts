@@ -79,9 +79,9 @@ export const BLOCK_CHALLENGES: Record<string, BlockChallenge> = {
       { from: 'adapter', to: 'adaptee', relation: 'wraps' },
       { from: 'client', to: 'target', relation: 'uses' },
     ],
-    // Client mid-left → Target; Adapter under Target wraps Adaptee.
+    // Client left → Target on top; Adapter under Target wraps Adaptee.
     solveLayout: {
-      client: { col: 0, row: 0.5 },
+      client: { col: 0, row: 0 },
       target: { col: 1, row: 0 },
       adapter: { col: 1, row: 1 },
       adaptee: { col: 2, row: 1 },
@@ -126,14 +126,14 @@ export const BLOCK_CHALLENGES: Record<string, BlockChallenge> = {
       { from: 'concrete-subject', to: 'observer-a', relation: 'notifies' },
       { from: 'concrete-subject', to: 'observer-b', relation: 'notifies' },
     ],
-    // 3-row UML: abstracts on top, ConcreteSubject mid-left, A/B lower so
-    // notify rails run under the row (no crossings with implements).
+    // A sits mid-high, B lower-right — notifies fan out without crossing
+    // the implements arcs that climb up to Observer.
     solveLayout: {
       subject: { col: 0, row: 0 },
-      observer: { col: 2.1, row: 0 },
-      'concrete-subject': { col: 0, row: 0.95 },
-      'observer-a': { col: 1.4, row: 1.85 },
-      'observer-b': { col: 2.8, row: 1.85 },
+      observer: { col: 2.4, row: 0 },
+      'observer-a': { col: 1.55, row: 0.9 },
+      'concrete-subject': { col: 0, row: 1.4 },
+      'observer-b': { col: 2.6, row: 1.95 },
     },
     relations: ['extends', 'implements', 'notifies'],
     animation: [
