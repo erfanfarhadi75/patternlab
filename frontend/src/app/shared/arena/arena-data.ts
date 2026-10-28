@@ -126,13 +126,14 @@ export const BLOCK_CHALLENGES: Record<string, BlockChallenge> = {
       { from: 'concrete-subject', to: 'observer-a', relation: 'notifies' },
       { from: 'concrete-subject', to: 'observer-b', relation: 'notifies' },
     ],
-    // Subject stack left; Observer interface centered over A/B on the right.
+    // 3-row UML: abstracts on top, ConcreteSubject mid-left, A/B lower so
+    // notify rails run under the row (no crossings with implements).
     solveLayout: {
       subject: { col: 0, row: 0 },
-      'concrete-subject': { col: 0, row: 1 },
-      observer: { col: 2, row: 0 },
-      'observer-a': { col: 1.35, row: 1 },
-      'observer-b': { col: 2.65, row: 1 },
+      observer: { col: 2.1, row: 0 },
+      'concrete-subject': { col: 0, row: 0.95 },
+      'observer-a': { col: 1.4, row: 1.85 },
+      'observer-b': { col: 2.8, row: 1.85 },
     },
     relations: ['extends', 'implements', 'notifies'],
     animation: [
