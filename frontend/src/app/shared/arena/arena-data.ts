@@ -39,6 +39,13 @@ export const BLOCK_CHALLENGES: Record<string, BlockChallenge> = {
       { from: 'concrete-product', to: 'product', relation: 'implements' },
       { from: 'concrete-creator', to: 'concrete-product', relation: 'creates' },
     ],
+    // Abstract on top, concrete below — creates runs left → right.
+    solveLayout: {
+      creator: { col: 0, row: 0 },
+      product: { col: 1, row: 0 },
+      'concrete-creator': { col: 0, row: 1 },
+      'concrete-product': { col: 1, row: 1 },
+    },
     relations: ['extends', 'implements', 'creates'],
     animation: [
       { pieceIds: ['creator'], message: { en: 'Call factoryMethod()', fa: 'صدا: factoryMethod()' } },
@@ -72,6 +79,13 @@ export const BLOCK_CHALLENGES: Record<string, BlockChallenge> = {
       { from: 'adapter', to: 'adaptee', relation: 'wraps' },
       { from: 'client', to: 'target', relation: 'uses' },
     ],
+    // Client mid-left → Target; Adapter under Target wraps Adaptee.
+    solveLayout: {
+      client: { col: 0, row: 0.5 },
+      target: { col: 1, row: 0 },
+      adapter: { col: 1, row: 1 },
+      adaptee: { col: 2, row: 1 },
+    },
     relations: ['implements', 'wraps', 'uses'],
     animation: [
       { pieceIds: ['client', 'target'], message: { en: 'Client → Target.request()', fa: 'Client → Target.request()' } },
@@ -112,6 +126,14 @@ export const BLOCK_CHALLENGES: Record<string, BlockChallenge> = {
       { from: 'concrete-subject', to: 'observer-a', relation: 'notifies' },
       { from: 'concrete-subject', to: 'observer-b', relation: 'notifies' },
     ],
+    // Subject stack left; Observer interface centered over A/B on the right.
+    solveLayout: {
+      subject: { col: 0, row: 0 },
+      'concrete-subject': { col: 0, row: 1 },
+      observer: { col: 2, row: 0 },
+      'observer-a': { col: 1.35, row: 1 },
+      'observer-b': { col: 2.65, row: 1 },
+    },
     relations: ['extends', 'implements', 'notifies'],
     animation: [
       { pieceIds: ['concrete-subject'], message: { en: 'State changes', fa: 'وضعیت عوض شد' } },

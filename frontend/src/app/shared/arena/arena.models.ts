@@ -18,6 +18,12 @@ export interface ArenaAnimStep {
   message: Record<string, string>;
 }
 
+/** Grid slot for Solve-it placement (UML-style rows/cols). */
+export interface ArenaSolveSlot {
+  col: number;
+  row: number;
+}
+
 export interface BlockChallenge {
   patternId: string;
   pieces: ArenaPieceDef[];
@@ -26,6 +32,8 @@ export interface BlockChallenge {
   relations: ArenaRelation[];
   animation: ArenaAnimStep[];
   brief: Record<string, string>;
+  /** Optional neat diagram slots used by Solve it. */
+  solveLayout?: Record<string, ArenaSolveSlot>;
 }
 
 export interface CodeBlank {

@@ -1107,24 +1107,19 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     this.reset();
 
     const ids = this.challenge.requiredPieceIds;
-    const cols = ids.length <= 4 ? 2 : 3;
-    const gapX = 168;
-    const gapY = 124;
-    const startX = 36;
-    const startY = 32;
+    const positions = this.solvePositions(ids);
     const byPiece = new Map<string, string>();
 
-    const placed = ids.map((pieceId, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const snapped = this.snap(startX + col * gapX, startY + row * gapY);
+    const placed = ids.map((pieceId) => {
+      const pos = positions.get(pieceId) ?? { x: 24, y: 24 };
+      // Keep diagram geometry exact (no grid snap) so columns/rows line up.
       const instanceId = `${pieceId}-${crypto.randomUUID().slice(0, 8)}`;
       byPiece.set(pieceId, instanceId);
       return {
         instanceId,
         pieceId,
-        x: snapped.x,
-        y: snapped.y,
+        x: Math.round(pos.x),
+        y: Math.round(pos.y),
       };
     });
     this.blocks.set(placed);
@@ -1140,6 +1135,54 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     );
 
     void this.validate();
+  }
+
+  /** Center a UML-style grid (or fall back to a balanced grid) in the stage. */
+  private solvePositions(ids: string[]): Map<string, { x: number; y: number }> {
+    const stage = this.stageRef?.nativeElement;
+    const stageW = stage?.clientWidth ?? 600;
+    const stageH = stage?.clientHeight ?? 380;
+
+    const layout = this.challenge.solveLayout;
+    const slots = ids.map((id, i) => {
+      const fromLayout = layout?.[id];
+      if (fromLayout) return { id, col: fromLayout.col, row: fromLayout.row };
+      const cols = ids.length <= 4 ? 2 : 3;
+      return { id, col: i % cols, row: Math.floor(i / cols) };
+    });
+
+    const colVals = slots.map((s) => s.col);
+    const rowVals = slots.map((s) => s.row);
+    const minCol = Math.min(...colVals);
+    const maxCol = Math.max(...colVals);
+    const minRow = Math.min(...rowVals);
+    const maxRow = Math.max(...rowVals);
+    const colSpan = Math.max(0.5, maxCol - minCol);
+    const rowSpan = Math.max(0.5, maxRow - minRow);
+
+    // Roomy gutters so wires/chips stay readable; shrink only if the stage is tight.
+    const padX = 36;
+    const padY = 36;
+    const idealCellW = this.blockW + 96; // ~224
+    const idealCellH = this.blockH + 64; // ~156
+    const fitCellW = (stageW - padX * 2 - this.blockW) / colSpan;
+    const fitCellH = (stageH - padY * 2 - this.blockH) / rowSpan;
+    const cellW = Math.min(idealCellW, Math.max(this.blockW + 56, fitCellW));
+    const cellH = Math.min(idealCellH, Math.max(this.blockH + 40, fitCellH));
+
+    const diagramW = colSpan * cellW + this.blockW;
+    const diagramH = rowSpan * cellH + this.blockH;
+    const originX = Math.max(padX, (stageW - diagramW) / 2);
+    const originY = Math.max(padY, (stageH - diagramH) / 2);
+
+    const out = new Map<string, { x: number; y: number }>();
+    for (const slot of slots) {
+      out.set(slot.id, {
+        x: originX + (slot.col - minCol) * cellW,
+        y: originY + (slot.row - minRow) * cellH,
+      });
+    }
+    return out;
   }
 
   async validate(): Promise<void> {
