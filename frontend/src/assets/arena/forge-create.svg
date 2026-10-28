@@ -15,9 +15,10 @@
       <animate attributeName="opacity" values="0.65;1;0.65" dur="1.2s" repeatCount="indefinite"/>
     </rect>
     <!-- check drawn around box center -->
-    <g transform="translate(72 32)">
+    <!-- optical nudge: ✓ mass sits slightly left/down of its bbox center -->
+    <g transform="translate(71.2 32.8)">
       <path
-        d="M-6.2 0.2 L-1.6 4.8 L7.2 -5.2"
+        d="M-6 0 L-1.5 4.6 L7 -5"
         fill="none"
         stroke="#fff7ed"
         stroke-width="2.6"
