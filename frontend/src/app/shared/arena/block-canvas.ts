@@ -87,7 +87,7 @@ interface MoveDrag {
             class="stage"
             [class.drop-hot]="stageHot()"
             role="application"
-            (click)="clearSelection()"
+            (click)="clearSelection($event)"
             (dragover)="onStageDragOver($event)"
             (dragleave)="onStageDragLeave($event)"
             (drop)="onStageDrop($event)"
@@ -124,6 +124,7 @@ interface MoveDrag {
                 (pointermove)="onBlockPointerMove($event)"
                 (pointerup)="onBlockPointerUp($event, block.instanceId)"
                 (pointercancel)="onBlockPointerCancel()"
+                (click)="$event.stopPropagation()"
                 (dblclick)="removeBlock($event, block.instanceId)"
               >
                 <span class="block__glow" aria-hidden="true"></span>
@@ -669,6 +670,8 @@ export class BlockCanvas implements OnChanges, OnDestroy {
   private suppressPaletteClick = false;
   private readonly blockW = 128;
   private readonly blockH = 92;
+  /** Pixels before a press counts as drag (not a wire tap). */
+  private readonly dragThreshold = 12;
 
   get artUrl(): string {
     return PATTERN_ART[this.challenge.patternId] ?? '/assets/arena/spark.gif.svg';
@@ -741,7 +744,6 @@ export class BlockCanvas implements OnChanges, OnDestroy {
   onBlockPointerDown(event: PointerEvent, instanceId: string): void {
     if (event.button !== 0 && event.pointerType === 'mouse') return;
     event.stopPropagation();
-    event.preventDefault();
     const block = this.blocks().find((b) => b.instanceId === instanceId);
     if (!block) return;
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -761,7 +763,9 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     if (!drag || drag.pointerId !== event.pointerId) return;
     const dx = event.clientX - drag.startClientX;
     const dy = event.clientY - drag.startClientY;
-    if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 6) return;
+    const dist = Math.hypot(dx, dy);
+    if (dist < this.dragThreshold) return;
+    event.preventDefault();
     const stage = this.stageRef?.nativeElement;
     const maxX = Math.max(0, (stage?.clientWidth ?? 600) - this.blockW);
     const maxY = Math.max(0, (stage?.clientHeight ?? 380) - this.blockH);
@@ -776,12 +780,26 @@ export class BlockCanvas implements OnChanges, OnDestroy {
   onBlockPointerUp(event: PointerEvent, instanceId: string): void {
     const drag = this.moveDrag();
     if (!drag || drag.pointerId !== event.pointerId) return;
+    event.stopPropagation();
     try {
       (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
     } catch {
       /* already released */
     }
-    if (!drag.moved) {
+
+    const dx = event.clientX - drag.startClientX;
+    const dy = event.clientY - drag.startClientY;
+    const wasDrag = drag.moved && Math.hypot(dx, dy) >= this.dragThreshold;
+
+    if (!wasDrag) {
+      // Revert any sub-threshold jitter so a wire tap stays a wire tap.
+      if (drag.moved) {
+        this.blocks.update((list) =>
+          list.map((b) =>
+            b.instanceId === instanceId ? { ...b, x: drag.origX, y: drag.origY } : b
+          )
+        );
+      }
       this.selectBlock(event, instanceId);
     } else {
       const block = this.blocks().find((b) => b.instanceId === instanceId);
@@ -797,6 +815,14 @@ export class BlockCanvas implements OnChanges, OnDestroy {
   }
 
   onBlockPointerCancel(): void {
+    const drag = this.moveDrag();
+    if (drag?.moved) {
+      this.blocks.update((list) =>
+        list.map((b) =>
+          b.instanceId === drag.instanceId ? { ...b, x: drag.origX, y: drag.origY } : b
+        )
+      );
+    }
     this.moveDrag.set(null);
   }
 
@@ -892,7 +918,11 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     this.structureOk.set(false);
   }
 
-  clearSelection(): void {
+  clearSelection(event?: Event): void {
+    // Ignore bubbled clicks that originated on a block.
+    if (event?.target instanceof Element) {
+      if (event.target.closest('button.block')) return;
+    }
     this.selectedId.set(null);
   }
 
