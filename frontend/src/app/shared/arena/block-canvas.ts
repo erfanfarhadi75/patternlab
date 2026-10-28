@@ -44,10 +44,32 @@ interface MoveDrag {
           </p>
           <p class="mission__brief">{{ challenge.brief | loc }}</p>
         </div>
-        <div class="combo" dir="ltr">
+        <div class="combo" [class.combo--ok]="structureOk()" [class.combo--ready]="liveReady()" dir="ltr">
           <img src="/assets/arena/xp-spin.svg" alt="" width="28" height="28" />
           <span>{{ edgeScore() }}/{{ challenge.expectedEdges.length }}</span>
         </div>
+      </div>
+
+      <div class="status" [class.status--won]="structureOk()" [class.status--ready]="!structureOk() && liveReady()">
+        @if (structureOk()) {
+          <app-arena-icon name="trophy" size="1.2rem" tone="amber" />
+          <strong>{{ 'arena.status.won' | t }}</strong>
+          <span class="muted">{{ feedback() || ('arena.feedback.ok' | t) }}</span>
+        } @else {
+          <span class="pill" [class.pill--ok]="pieceScore() >= challenge.requiredPieceIds.length">
+            {{ 'arena.status.pieces' | t: { have: pieceScore(), need: challenge.requiredPieceIds.length } }}
+          </span>
+          <span class="pill" [class.pill--ok]="edgeScore() >= challenge.expectedEdges.length">
+            {{ 'arena.status.links' | t: { have: edgeScore(), need: challenge.expectedEdges.length } }}
+          </span>
+          @if (liveReady()) {
+            <span class="hint hint--ready">{{ 'arena.status.ready' | t }}</span>
+          } @else if (feedback()) {
+            <span class="hint hint--err">{{ feedback() }}</span>
+          } @else {
+            <span class="hint">{{ 'arena.status.hint' | t }}</span>
+          }
+        }
       </div>
 
       <div class="workspace">
@@ -173,13 +195,20 @@ interface MoveDrag {
 
       <div class="actions">
         <button type="button" class="btn ghost" (click)="reset()">{{ 'arena.reset' | t }}</button>
-        <button type="button" class="btn primary punch" [disabled]="busy()" (click)="validate()">
+        <button
+          type="button"
+          class="btn primary punch"
+          [disabled]="busy() || structureOk()"
+          (click)="validate()"
+        >
           <app-arena-icon name="trophy" size="1.1rem" />
           {{ 'arena.validate' | t }}
         </button>
         <button
           type="button"
-          class="btn ghost punch"
+          class="btn punch"
+          [class.primary]="structureOk()"
+          [class.ghost]="!structureOk()"
           [disabled]="!structureOk() || animating()"
           (click)="runAnimation()"
         >
@@ -188,13 +217,9 @@ interface MoveDrag {
         </button>
       </div>
 
-      @if (feedback()) {
-        <div class="feedback" [class.ok]="structureOk()" [class.bad]="!structureOk()">
-          @if (structureOk()) {
-            <app-arena-icon name="trophy" size="1.35rem" tone="amber" />
-          } @else {
-            <app-arena-icon name="xp" size="1.35rem" tone="muted" />
-          }
+      @if (feedback() && !structureOk()) {
+        <div class="feedback bad">
+          <app-arena-icon name="xp" size="1.35rem" tone="muted" />
           <p>{{ feedback() }}</p>
         </div>
       }
@@ -251,6 +276,65 @@ interface MoveDrag {
         border-radius: 999px;
         border: 1px solid var(--line);
         background: color-mix(in oklab, var(--accent-2) 12%, transparent);
+      }
+      .combo--ready {
+        border-color: var(--accent);
+        background: color-mix(in oklab, var(--accent) 14%, transparent);
+      }
+      .combo--ok {
+        border-color: var(--accent);
+        background: color-mix(in oklab, var(--accent) 18%, transparent);
+        color: var(--accent);
+      }
+      .status {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.45rem 0.65rem;
+        margin: -0.25rem 0 0.95rem;
+        padding: 0.55rem 0.75rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--line);
+        background: color-mix(in oklab, var(--surface) 88%, transparent);
+        font-size: 0.88rem;
+      }
+      .status--won {
+        border-color: color-mix(in oklab, var(--accent) 45%, var(--line));
+        background: color-mix(in oklab, var(--accent) 12%, var(--surface));
+      }
+      .status--ready {
+        border-color: color-mix(in oklab, var(--warn, #d4a017) 40%, var(--line));
+        background: color-mix(in oklab, var(--warn, #d4a017) 10%, var(--surface));
+      }
+      .status strong {
+        font-family: var(--font-display);
+      }
+      .status .muted {
+        color: var(--muted);
+      }
+      .status .hint {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+      .status .hint--ready {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .status .hint--err {
+        color: color-mix(in oklab, #b33 70%, var(--ink));
+      }
+      .pill {
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        color: var(--muted);
+      }
+      .pill--ok {
+        color: var(--ink);
+        border-color: var(--accent);
+        background: color-mix(in oklab, var(--accent) 12%, transparent);
       }
       .workspace {
         display: grid;
@@ -683,6 +767,7 @@ export class BlockCanvas implements OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearAnimTimer();
+    if (this.autoCheckTimer) clearTimeout(this.autoCheckTimer);
   }
 
   onPaletteDragStart(event: DragEvent, pieceId: string): void {
@@ -837,6 +922,22 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     ).length;
   }
 
+  pieceScore(): number {
+    const placed = new Set(this.blocks().map((b) => b.pieceId));
+    return this.challenge.requiredPieceIds.filter((id) => placed.has(id)).length;
+  }
+
+  liveReady(): boolean {
+    if (this.structureOk()) return true;
+    const distractors = this.challenge.pieces.filter((p) => p.distractor).map((p) => p.id);
+    const placed = new Set(this.blocks().map((b) => b.pieceId));
+    if (distractors.some((d) => placed.has(d))) return false;
+    return (
+      this.pieceScore() >= this.challenge.requiredPieceIds.length &&
+      this.edgeScore() >= this.challenge.expectedEdges.length
+    );
+  }
+
   placedCount(pieceId: string): number {
     return this.blocks().filter((b) => b.pieceId === pieceId).length;
   }
@@ -865,6 +966,7 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     ]);
     this.structureOk.set(false);
     this.feedback.set('');
+    this.maybeAutoCheck();
   }
 
   private snap(x: number, y: number): { x: number; y: number } {
@@ -903,6 +1005,7 @@ export class BlockCanvas implements OnChanges, OnDestroy {
       this.selectedId.set(null);
       this.structureOk.set(false);
       this.feedback.set('');
+      this.maybeAutoCheck();
       return;
     }
     this.selectedId.set(instanceId);
@@ -916,6 +1019,7 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     );
     if (this.selectedId() === instanceId) this.selectedId.set(null);
     this.structureOk.set(false);
+    this.feedback.set('');
   }
 
   clearSelection(event?: Event): void {
@@ -972,6 +1076,18 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     return this.hotEdgeIds().has(edge.id);
   }
 
+  private autoCheckTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private maybeAutoCheck(): void {
+    if (this.structureOk() || this.busy()) return;
+    if (this.autoCheckTimer) clearTimeout(this.autoCheckTimer);
+    this.autoCheckTimer = setTimeout(() => {
+      this.autoCheckTimer = null;
+      if (!this.liveReady() || this.structureOk()) return;
+      void this.validate();
+    }, 280);
+  }
+
   async validate(): Promise<void> {
     this.busy.set(true);
     try {
@@ -979,6 +1095,12 @@ export class BlockCanvas implements OnChanges, OnDestroy {
       this.structureOk.set(result.ok);
       this.feedback.set(result.message);
       this.cleared.emit({ score: result.score, passed: result.ok });
+      if (result.ok && !this.settings.settings().reduceMotion) {
+        // Brief beat, then auto-play the flow so success is obvious.
+        setTimeout(() => {
+          if (this.structureOk() && !this.animating()) this.runAnimation();
+        }, 450);
+      }
     } finally {
       this.busy.set(false);
     }
