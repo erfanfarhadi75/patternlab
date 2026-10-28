@@ -1,11 +1,13 @@
 import {
   Component,
+  ElementRef,
   EventEmitter,
   Input,
   OnChanges,
   OnDestroy,
   Output,
   SimpleChanges,
+  ViewChild,
   inject,
   signal,
 } from '@angular/core';
@@ -17,6 +19,16 @@ import { LocalizePipe } from '../../core/pipes/localize.pipe';
 import { BlockChallenge, CanvasEdge, PlacedBlock } from './arena.models';
 import { ArenaIcon } from './arena-icon';
 import { PATTERN_ART } from './arena-data';
+
+interface MoveDrag {
+  instanceId: string;
+  startClientX: number;
+  startClientY: number;
+  origX: number;
+  origY: number;
+  moved: boolean;
+  pointerId: number;
+}
 
 @Component({
   selector: 'app-block-canvas',
@@ -50,8 +62,12 @@ import { PATTERN_ART } from './arena-data';
               class="piece"
               [class.distractor]="piece.distractor"
               [class.used]="placedCount(piece.id) > 0"
+              [class.dragging]="dragPieceId() === piece.id"
               [disabled]="placedCount(piece.id) > 0"
-              (click)="addPiece(piece.id)"
+              [attr.draggable]="placedCount(piece.id) === 0"
+              (dragstart)="onPaletteDragStart($event, piece.id)"
+              (dragend)="onPaletteDragEnd()"
+              (click)="onPaletteClick(piece.id)"
               [title]="piece.hint | loc"
             >
               <app-arena-icon [name]="piece.id" size="2.45rem" />
@@ -64,7 +80,16 @@ import { PATTERN_ART } from './arena-data';
         </aside>
 
         <div class="stage-wrap">
-          <div class="stage" role="application" (click)="clearSelection()">
+          <div
+            #stage
+            class="stage"
+            [class.drop-hot]="stageHot()"
+            role="application"
+            (click)="clearSelection()"
+            (dragover)="onStageDragOver($event)"
+            (dragleave)="onStageDragLeave($event)"
+            (drop)="onStageDrop($event)"
+          >
             <img class="stage__spark" src="/assets/arena/spark.gif.svg" alt="" />
             <svg class="wires" aria-hidden="true">
               @for (edge of edges(); track edge.id) {
@@ -90,9 +115,13 @@ import { PATTERN_ART } from './arena-data';
                 class="block"
                 [class.selected]="selectedId() === block.instanceId"
                 [class.hot]="hotPieceIds().has(pieceIdOf(block.instanceId))"
+                [class.dragging]="moveDrag()?.instanceId === block.instanceId && moveDrag()?.moved"
                 [style.left.px]="block.x"
                 [style.top.px]="block.y"
-                (click)="selectBlock($event, block.instanceId)"
+                (pointerdown)="onBlockPointerDown($event, block.instanceId)"
+                (pointermove)="onBlockPointerMove($event)"
+                (pointerup)="onBlockPointerUp($event, block.instanceId)"
+                (pointercancel)="onBlockPointerCancel()"
                 (dblclick)="removeBlock($event, block.instanceId)"
               >
                 <span class="block__glow" aria-hidden="true"></span>
@@ -265,9 +294,19 @@ import { PATTERN_ART } from './arena-data';
         border-color: var(--accent);
         box-shadow: 0 10px 22px color-mix(in oklab, var(--accent) 18%, transparent);
       }
+      .piece:not(:disabled) {
+        cursor: grab;
+      }
+      .piece:not(:disabled):active,
+      .piece.dragging {
+        cursor: grabbing;
+        opacity: 0.7;
+        transform: scale(1.05) rotate(-2deg);
+      }
       .piece.used {
         opacity: 0.4;
         filter: grayscale(0.4);
+        cursor: default;
       }
       .piece.distractor {
         border-style: dashed;
@@ -302,12 +341,18 @@ import { PATTERN_ART } from './arena-data';
         border-radius: 1.1rem;
         border: 1px solid var(--line);
         overflow: hidden;
+        touch-action: none;
         background:
           radial-gradient(circle at 20% 20%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 40%),
           radial-gradient(circle at 80% 10%, color-mix(in oklab, var(--accent-2) 12%, transparent), transparent 35%),
           linear-gradient(color-mix(in oklab, var(--line) 50%, transparent) 1px, transparent 1px) 0 0 / 28px 28px,
           linear-gradient(90deg, color-mix(in oklab, var(--line) 50%, transparent) 1px, transparent 1px) 0 0 / 28px 28px,
           color-mix(in oklab, var(--surface) 94%, transparent);
+        transition: box-shadow 160ms ease, border-color 160ms ease;
+      }
+      .stage.drop-hot {
+        border-color: var(--accent);
+        box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--accent) 45%, transparent);
       }
       .stage__spark {
         position: absolute;
@@ -357,7 +402,9 @@ import { PATTERN_ART } from './arena-data';
         border: 1px solid var(--line);
         background: linear-gradient(165deg, color-mix(in oklab, var(--surface) 55%, var(--accent)), var(--surface));
         color: inherit;
-        cursor: pointer;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
         display: grid;
         justify-items: center;
         gap: 0.3rem;
@@ -390,6 +437,13 @@ import { PATTERN_ART } from './arena-data';
         border-color: var(--accent-2);
         transform: translateY(-4px) scale(1.06);
         box-shadow: 0 14px 30px color-mix(in oklab, var(--accent-2) 30%, transparent);
+      }
+      .block.dragging {
+        cursor: grabbing;
+        z-index: 8;
+        transform: scale(1.08) rotate(-1.5deg);
+        box-shadow: 0 18px 36px color-mix(in oklab, var(--accent) 28%, transparent);
+        transition: none;
       }
       .block__label {
         font-family: var(--font-mono);
@@ -531,6 +585,7 @@ import { PATTERN_ART } from './arena-data';
 export class BlockCanvas implements OnChanges, OnDestroy {
   @Input({ required: true }) challenge!: BlockChallenge;
   @Output() readonly cleared = new EventEmitter<{ score: number; passed: boolean }>();
+  @ViewChild('stage') stageRef?: ElementRef<HTMLElement>;
 
   private readonly i18n = inject(I18nService);
   private readonly settings = inject(SettingsService);
@@ -546,10 +601,16 @@ export class BlockCanvas implements OnChanges, OnDestroy {
   readonly animMessage = signal('');
   readonly hotPieceIds = signal<Set<string>>(new Set());
   readonly hotEdgeIds = signal<Set<string>>(new Set());
+  readonly dragPieceId = signal<string | null>(null);
+  readonly stageHot = signal(false);
+  readonly moveDrag = signal<MoveDrag | null>(null);
   readonly confetti = Array.from({ length: 14 }, (_, i) => i);
 
   private animTimer: ReturnType<typeof setTimeout> | null = null;
   private placeIndex = 0;
+  private suppressPaletteClick = false;
+  private readonly blockW = 124;
+  private readonly blockH = 88;
 
   get artUrl(): string {
     return PATTERN_ART[this.challenge.patternId] ?? '/assets/arena/spark.gif.svg';
@@ -561,6 +622,117 @@ export class BlockCanvas implements OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearAnimTimer();
+  }
+
+  onPaletteDragStart(event: DragEvent, pieceId: string): void {
+    if (this.placedCount(pieceId) > 0) {
+      event.preventDefault();
+      return;
+    }
+    this.suppressPaletteClick = true;
+    event.dataTransfer?.setData('application/x-arena-piece', pieceId);
+    event.dataTransfer?.setData('text/plain', pieceId);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy';
+    this.dragPieceId.set(pieceId);
+  }
+
+  onPaletteDragEnd(): void {
+    this.dragPieceId.set(null);
+    this.stageHot.set(false);
+    // Click fires after dragend in some browsers — ignore it once.
+    setTimeout(() => {
+      this.suppressPaletteClick = false;
+    }, 0);
+  }
+
+  onPaletteClick(pieceId: string): void {
+    if (this.suppressPaletteClick) return;
+    this.addPiece(pieceId);
+  }
+
+  onStageDragOver(event: DragEvent): void {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    this.stageHot.set(true);
+  }
+
+  onStageDragLeave(event: DragEvent): void {
+    const stage = this.stageRef?.nativeElement;
+    if (!stage) return;
+    const related = event.relatedTarget as Node | null;
+    if (related && stage.contains(related)) return;
+    this.stageHot.set(false);
+  }
+
+  onStageDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.stageHot.set(false);
+    const pieceId =
+      event.dataTransfer?.getData('application/x-arena-piece') ||
+      event.dataTransfer?.getData('text/plain');
+    if (!pieceId) return;
+    const stage = this.stageRef?.nativeElement;
+    if (!stage) return;
+    const rect = stage.getBoundingClientRect();
+    const x = event.clientX - rect.left - this.blockW / 2;
+    const y = event.clientY - rect.top - this.blockH / 2;
+    this.placePieceAt(pieceId, x, y);
+    this.dragPieceId.set(null);
+  }
+
+  onBlockPointerDown(event: PointerEvent, instanceId: string): void {
+    if (event.button !== 0 && event.pointerType === 'mouse') return;
+    event.stopPropagation();
+    event.preventDefault();
+    const block = this.blocks().find((b) => b.instanceId === instanceId);
+    if (!block) return;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    this.moveDrag.set({
+      instanceId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      origX: block.x,
+      origY: block.y,
+      moved: false,
+      pointerId: event.pointerId,
+    });
+  }
+
+  onBlockPointerMove(event: PointerEvent): void {
+    const drag = this.moveDrag();
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const dx = event.clientX - drag.startClientX;
+    const dy = event.clientY - drag.startClientY;
+    if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 6) return;
+    const stage = this.stageRef?.nativeElement;
+    const maxX = Math.max(0, (stage?.clientWidth ?? 600) - this.blockW);
+    const maxY = Math.max(0, (stage?.clientHeight ?? 380) - this.blockH);
+    const x = Math.min(maxX, Math.max(0, drag.origX + dx));
+    const y = Math.min(maxY, Math.max(0, drag.origY + dy));
+    this.moveDrag.set({ ...drag, moved: true });
+    this.blocks.update((list) =>
+      list.map((b) => (b.instanceId === drag.instanceId ? { ...b, x, y } : b))
+    );
+  }
+
+  onBlockPointerUp(event: PointerEvent, instanceId: string): void {
+    const drag = this.moveDrag();
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    try {
+      (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+    } catch {
+      /* already released */
+    }
+    if (!drag.moved) {
+      this.selectBlock(event, instanceId);
+    } else {
+      this.structureOk.set(false);
+    }
+    this.moveDrag.set(null);
+  }
+
+  onBlockPointerCancel(): void {
+    this.moveDrag.set(null);
   }
 
   edgeScore(): number {
@@ -583,16 +755,30 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     const col = this.placeIndex % 3;
     const row = Math.floor(this.placeIndex / 3);
     this.placeIndex += 1;
+    this.placePieceAt(pieceId, 36 + col * 150, 36 + row * 120);
+  }
+
+  placePieceAt(pieceId: string, x: number, y: number): void {
+    if (this.placedCount(pieceId) > 0) return;
+    if (!this.challenge.pieces.some((p) => p.id === pieceId)) return;
+    const stage = this.stageRef?.nativeElement;
+    const maxX = Math.max(0, (stage?.clientWidth ?? 600) - this.blockW);
+    const maxY = Math.max(0, (stage?.clientHeight ?? 380) - this.blockH);
     const instanceId = `${pieceId}-${crypto.randomUUID().slice(0, 8)}`;
     this.blocks.update((list) => [
       ...list,
-      { instanceId, pieceId, x: 36 + col * 150, y: 36 + row * 120 },
+      {
+        instanceId,
+        pieceId,
+        x: Math.min(maxX, Math.max(0, x)),
+        y: Math.min(maxY, Math.max(0, y)),
+      },
     ]);
     this.structureOk.set(false);
     this.feedback.set('');
   }
 
-  selectBlock(event: MouseEvent, instanceId: string): void {
+  selectBlock(event: Event, instanceId: string): void {
     event.stopPropagation();
     const prev = this.selectedId();
     if (prev && prev !== instanceId) {
@@ -645,6 +831,9 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     this.hotPieceIds.set(new Set());
     this.hotEdgeIds.set(new Set());
     this.animating.set(false);
+    this.dragPieceId.set(null);
+    this.stageHot.set(false);
+    this.moveDrag.set(null);
     this.placeIndex = 0;
     if (this.challenge.relations.length) this.activeRelation.set(this.challenge.relations[0]);
   }

@@ -55,7 +55,7 @@
   "arena.eyebrow": "Playground",
   "arena.mission": "Mission",
   "arena.palette": "Kit",
-  "arena.canvasEmpty": "Tap a piece",
+  "arena.canvasEmpty": "Drag a piece here",
   "arena.relations": "Link",
   "arena.connectHint": "A → B",
   "arena.reset": "Reset",
