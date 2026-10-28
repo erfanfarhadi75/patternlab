@@ -248,7 +248,8 @@ import {
       .modes button {
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
+        justify-content: center;
+        gap: 0.4rem;
         padding: 0.5rem 0.85rem;
         border-radius: 999px;
         border: 1px solid var(--line);
@@ -257,6 +258,10 @@ import {
         cursor: pointer;
         font: inherit;
         font-size: 0.88rem;
+        line-height: 1;
+      }
+      .modes button app-arena-icon {
+        flex-shrink: 0;
       }
       .modes button.active {
         color: var(--ink);

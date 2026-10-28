@@ -70,10 +70,12 @@ interface MoveDrag {
               (click)="onPaletteClick(piece.id)"
               [title]="piece.hint | loc"
             >
-              <app-arena-icon [name]="piece.id" size="2.45rem" />
+              <span class="piece__icon">
+                <app-arena-icon [name]="piece.id" size="2.15rem" />
+              </span>
               <span class="piece__role">{{ piece.label | loc }}</span>
               @if (piece.distractor) {
-                <span class="trap">!</span>
+                <span class="trap" title="trap">!</span>
               }
             </button>
           }
@@ -125,7 +127,9 @@ interface MoveDrag {
                 (dblclick)="removeBlock($event, block.instanceId)"
               >
                 <span class="block__glow" aria-hidden="true"></span>
-                <app-arena-icon [name]="block.pieceId" size="2.45rem" />
+                <span class="block__icon">
+                  <app-arena-icon [name]="block.pieceId" size="2.05rem" />
+                </span>
                 <span class="block__label" dir="ltr">{{ labelOf(block.pieceId) }}</span>
               </button>
             }
@@ -275,24 +279,28 @@ interface MoveDrag {
       .piece {
         position: relative;
         display: grid;
+        grid-template-rows: 2.5rem auto;
         justify-items: center;
-        gap: 0.3rem;
+        align-items: center;
+        gap: 0.35rem;
         width: 100%;
-        margin-bottom: 0.5rem;
-        padding: 0.75rem 0.4rem 0.55rem;
-        border-radius: 1rem;
+        margin-bottom: 0.45rem;
+        padding: 0.55rem 0.35rem 0.5rem;
+        border-radius: 0.85rem;
         border: 1px solid var(--line);
-        background:
-          url('/assets/arena/tile-glow.svg') center / cover no-repeat,
-          linear-gradient(160deg, color-mix(in oklab, var(--surface) 70%, var(--accent)), var(--surface));
+        background: linear-gradient(
+          165deg,
+          color-mix(in oklab, var(--surface) 72%, var(--accent)),
+          var(--surface)
+        );
         color: inherit;
         cursor: pointer;
         transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
       }
       .piece:hover:not(:disabled) {
-        transform: translateY(-3px) scale(1.03);
+        transform: translateY(-2px);
         border-color: var(--accent);
-        box-shadow: 0 10px 22px color-mix(in oklab, var(--accent) 18%, transparent);
+        box-shadow: 0 8px 18px color-mix(in oklab, var(--accent) 16%, transparent);
       }
       .piece:not(:disabled) {
         cursor: grab;
@@ -300,36 +308,56 @@ interface MoveDrag {
       .piece:not(:disabled):active,
       .piece.dragging {
         cursor: grabbing;
-        opacity: 0.7;
-        transform: scale(1.05) rotate(-2deg);
+        opacity: 0.75;
+        transform: scale(1.04);
       }
       .piece.used {
-        opacity: 0.4;
-        filter: grayscale(0.4);
+        opacity: 0.38;
+        filter: grayscale(0.35);
         cursor: default;
       }
       .piece.distractor {
         border-style: dashed;
       }
+      .piece__icon {
+        width: 2.65rem;
+        height: 2.65rem;
+        display: grid;
+        place-items: center;
+        border-radius: 0.55rem;
+        background: color-mix(in oklab, var(--surface) 92%, #fff);
+        border: 1px solid color-mix(in oklab, var(--line) 70%, transparent);
+      }
+      .piece__icon app-arena-icon {
+        display: grid;
+        place-items: center;
+      }
       .piece__role {
         font-family: var(--font-mono);
-        font-size: 0.68rem;
+        font-size: 0.62rem;
         text-align: center;
-        line-height: 1.2;
+        line-height: 1.15;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 0 0.15rem;
       }
       .trap {
         position: absolute;
-        top: 0.25rem;
-        inset-inline-end: 0.35rem;
-        width: 1rem;
-        height: 1rem;
+        top: -0.2rem;
+        inset-inline-end: -0.15rem;
+        width: 1.05rem;
+        height: 1.05rem;
         border-radius: 50%;
         background: var(--accent-2);
         color: #fff7ed;
-        font-size: 0.7rem;
+        font-size: 0.68rem;
         font-weight: 700;
         display: grid;
         place-items: center;
+        border: 2px solid var(--surface);
+        line-height: 1;
       }
       .stage-wrap {
         display: grid;
@@ -391,14 +419,16 @@ interface MoveDrag {
         width: 36px;
         height: 24px;
         border-radius: 999px;
-        background: color-mix(in oklab, var(--surface) 88%, transparent);
+        background: color-mix(in oklab, var(--surface) 94%, transparent);
         border: 1px solid var(--line);
+        box-shadow: 0 2px 6px color-mix(in oklab, #0b1c16 8%, transparent);
       }
       .block {
         position: absolute;
-        width: 124px;
-        padding: 0.7rem 0.5rem 0.55rem;
-        border-radius: 1rem;
+        width: 128px;
+        min-height: 92px;
+        padding: 0.55rem 0.45rem 0.5rem;
+        border-radius: 0.85rem;
         border: 1px solid var(--line);
         background: linear-gradient(165deg, color-mix(in oklab, var(--surface) 55%, var(--accent)), var(--surface));
         color: inherit;
@@ -406,9 +436,11 @@ interface MoveDrag {
         touch-action: none;
         user-select: none;
         display: grid;
+        grid-template-rows: 2.4rem auto;
         justify-items: center;
-        gap: 0.3rem;
-        box-shadow: 0 10px 24px color-mix(in oklab, #0b1c16 10%, transparent);
+        align-items: center;
+        gap: 0.35rem;
+        box-shadow: 0 8px 20px color-mix(in oklab, #0b1c16 10%, transparent);
         transition: transform 180ms ease, box-shadow 180ms ease, border-color 160ms ease;
         z-index: 2;
         animation: pop 280ms ease both;
@@ -417,8 +449,27 @@ interface MoveDrag {
       .block__glow {
         position: absolute;
         inset: -20%;
-        background: radial-gradient(circle at 30% 20%, color-mix(in oklab, var(--accent-2) 28%, transparent), transparent 55%);
+        background: radial-gradient(
+          circle at 30% 20%,
+          color-mix(in oklab, var(--accent-2) 22%, transparent),
+          transparent 55%
+        );
         pointer-events: none;
+      }
+      .block__icon {
+        position: relative;
+        z-index: 1;
+        width: 2.65rem;
+        height: 2.65rem;
+        display: grid;
+        place-items: center;
+        border-radius: 0.55rem;
+        background: color-mix(in oklab, var(--surface) 94%, #fff);
+        border: 1px solid color-mix(in oklab, var(--line) 70%, transparent);
+      }
+      .block__icon app-arena-icon {
+        display: grid;
+        place-items: center;
       }
       .win-stamp {
         position: absolute;
@@ -435,22 +486,29 @@ interface MoveDrag {
       }
       .block.hot {
         border-color: var(--accent-2);
-        transform: translateY(-4px) scale(1.06);
-        box-shadow: 0 14px 30px color-mix(in oklab, var(--accent-2) 30%, transparent);
+        transform: translateY(-3px) scale(1.04);
+        box-shadow: 0 12px 26px color-mix(in oklab, var(--accent-2) 28%, transparent);
       }
       .block.dragging {
         cursor: grabbing;
         z-index: 8;
-        transform: scale(1.08) rotate(-1.5deg);
-        box-shadow: 0 18px 36px color-mix(in oklab, var(--accent) 28%, transparent);
+        transform: scale(1.05);
+        box-shadow: 0 16px 32px color-mix(in oklab, var(--accent) 26%, transparent);
         transition: none;
       }
       .block__label {
+        position: relative;
+        z-index: 1;
         font-family: var(--font-mono);
-        font-size: 0.72rem;
+        font-size: 0.68rem;
         font-weight: 500;
         text-align: center;
-        line-height: 1.2;
+        line-height: 1.15;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 0 0.15rem;
       }
       .empty {
         position: absolute;
@@ -609,8 +667,8 @@ export class BlockCanvas implements OnChanges, OnDestroy {
   private animTimer: ReturnType<typeof setTimeout> | null = null;
   private placeIndex = 0;
   private suppressPaletteClick = false;
-  private readonly blockW = 124;
-  private readonly blockH = 88;
+  private readonly blockW = 128;
+  private readonly blockH = 92;
 
   get artUrl(): string {
     return PATTERN_ART[this.challenge.patternId] ?? '/assets/arena/spark.gif.svg';
@@ -726,6 +784,13 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     if (!drag.moved) {
       this.selectBlock(event, instanceId);
     } else {
+      const block = this.blocks().find((b) => b.instanceId === instanceId);
+      if (block) {
+        const snapped = this.snap(block.x, block.y);
+        this.blocks.update((list) =>
+          list.map((b) => (b.instanceId === instanceId ? { ...b, ...snapped } : b))
+        );
+      }
       this.structureOk.set(false);
     }
     this.moveDrag.set(null);
@@ -755,27 +820,38 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     const col = this.placeIndex % 3;
     const row = Math.floor(this.placeIndex / 3);
     this.placeIndex += 1;
-    this.placePieceAt(pieceId, 36 + col * 150, 36 + row * 120);
+    this.placePieceAt(pieceId, 24 + col * 148, 24 + row * 116);
   }
 
   placePieceAt(pieceId: string, x: number, y: number): void {
     if (this.placedCount(pieceId) > 0) return;
     if (!this.challenge.pieces.some((p) => p.id === pieceId)) return;
-    const stage = this.stageRef?.nativeElement;
-    const maxX = Math.max(0, (stage?.clientWidth ?? 600) - this.blockW);
-    const maxY = Math.max(0, (stage?.clientHeight ?? 380) - this.blockH);
+    const snapped = this.snap(x, y);
     const instanceId = `${pieceId}-${crypto.randomUUID().slice(0, 8)}`;
     this.blocks.update((list) => [
       ...list,
       {
         instanceId,
         pieceId,
-        x: Math.min(maxX, Math.max(0, x)),
-        y: Math.min(maxY, Math.max(0, y)),
+        x: snapped.x,
+        y: snapped.y,
       },
     ]);
     this.structureOk.set(false);
     this.feedback.set('');
+  }
+
+  private snap(x: number, y: number): { x: number; y: number } {
+    const stage = this.stageRef?.nativeElement;
+    const maxX = Math.max(0, (stage?.clientWidth ?? 600) - this.blockW);
+    const maxY = Math.max(0, (stage?.clientHeight ?? 380) - this.blockH);
+    const grid = 16;
+    const sx = Math.round(x / grid) * grid;
+    const sy = Math.round(y / grid) * grid;
+    return {
+      x: Math.min(maxX, Math.max(0, sx)),
+      y: Math.min(maxY, Math.max(0, sy)),
+    };
   }
 
   selectBlock(event: Event, instanceId: string): void {
@@ -851,10 +927,10 @@ export class BlockCanvas implements OnChanges, OnDestroy {
     const from = this.blocks().find((b) => b.instanceId === edge.fromInstanceId);
     const to = this.blocks().find((b) => b.instanceId === edge.toInstanceId);
     if (!from || !to) return null;
-    const x1 = from.x + 59;
-    const y1 = from.y + 40;
-    const x2 = to.x + 59;
-    const y2 = to.y + 40;
+    const x1 = from.x + this.blockW / 2;
+    const y1 = from.y + this.blockH / 2;
+    const x2 = to.x + this.blockW / 2;
+    const y2 = to.y + this.blockH / 2;
     const mx = (x1 + x2) / 2;
     const my = (y1 + y2) / 2 - 4;
     const cx = (x1 + x2) / 2;
