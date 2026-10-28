@@ -1,0 +1,21 @@
+# Node / Angular
+node_modules/
+frontend/dist/
+frontend/.angular/
+*.log
+npm-debug.log*
+
+# .NET
+backend/bin/
+backend/obj/
+backend/Data/progress-store.json
+
+# IDE / OS
+.idea/
+.vscode/
+*.user
+.DS_Store
+
+# Env
+.env
+.env.*
