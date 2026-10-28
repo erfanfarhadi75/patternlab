@@ -18,7 +18,8 @@ import { LocalizePipe } from '../../core/pipes/localize.pipe';
       <h1>{{ 'dashboard.greeting' | t }}</h1>
       <p class="lede">{{ 'dashboard.subtitle' | t }}</p>
       <div class="cta-row">
-        <a class="btn primary" [routerLink]="nextLink()">{{ 'cta.continue' | t }}</a>
+        <a class="btn primary" routerLink="/practice" [queryParams]="playQuery()">{{ 'cta.play' | t }}</a>
+        <a class="btn ghost" [routerLink]="nextLink()">{{ 'cta.continue' | t }}</a>
         <a class="btn ghost" routerLink="/explorer">{{ 'cta.explore' | t }}</a>
       </div>
       <div class="stats" aria-label="Progress snapshot">
@@ -39,13 +40,14 @@ import { LocalizePipe } from '../../core/pipes/localize.pipe';
 
     <section class="next">
       <h2>{{ 'dashboard.nextStep' | t }}</h2>
+      <p class="play-hint">{{ 'dashboard.playHint' | t }}</p>
       @if (loading()) {
         <p class="muted">{{ 'loading' | t }}</p>
       } @else if (error()) {
         <p class="error">{{ 'dashboard.empty' | t }}</p>
       } @else if (nextPattern(); as p) {
-        <a class="next-card" [routerLink]="['/patterns', p.id]">
-          <span class="cat">{{ ('filter.' + p.categoryId) | t }}</span>
+        <a class="next-card" routerLink="/practice" [queryParams]="playQuery()">
+          <span class="cat">{{ ('filter.' + p.categoryId) | t }} · {{ 'nav.practice' | t }}</span>
           <strong>{{ p.name | loc }}</strong>
           <span>{{ p.tagline | loc }}</span>
         </a>
@@ -112,7 +114,12 @@ import { LocalizePipe } from '../../core/pipes/localize.pipe';
       .next h2 {
         font-family: var(--font-display);
         font-size: 1.2rem;
-        margin-bottom: 0.8rem;
+        margin-bottom: 0.35rem;
+      }
+      .play-hint {
+        color: var(--muted);
+        margin: 0 0 0.9rem;
+        max-width: 36rem;
       }
       .next-card {
         display: grid;
@@ -160,6 +167,11 @@ export class DashboardPage implements OnInit {
   nextLink(): string[] {
     const p = this.nextPattern();
     return p ? ['/patterns', p.id] : ['/explorer'];
+  }
+
+  playQuery(): { pattern: string; mode: string } {
+    const p = this.nextPattern();
+    return { pattern: p?.id ?? 'factory-method', mode: 'blocks' };
   }
 
   async ngOnInit(): Promise<void> {

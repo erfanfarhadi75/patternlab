@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { ProgressSnapshotDto, SubmitAnswerResponse } from '../models/models';
+import { CompleteArenaResponse, ProgressSnapshotDto, SubmitAnswerResponse } from '../models/models';
 import { ApiService } from './api.service';
 import { SettingsService } from './settings.service';
 
@@ -57,6 +57,27 @@ export class ProgressStoreService {
 
   isExerciseComplete(patternId: string, exerciseId: string): boolean {
     return this.progress()?.completedExercises.includes(`${patternId}:${exerciseId}`) ?? false;
+  }
+
+  isArenaComplete(patternId: string, challengeId: string): boolean {
+    return (
+      this.progress()?.completedExercises.includes(`${patternId}:arena:${challengeId}`) ?? false
+    );
+  }
+
+  async completeArena(
+    patternId: string,
+    challengeId: string,
+    mode: string,
+    passed: boolean,
+    score: number
+  ): Promise<CompleteArenaResponse> {
+    const userId = this.settings.settings().userId;
+    const result = await firstValueFrom(
+      this.api.completeArena(userId, { patternId, challengeId, mode, passed, score })
+    );
+    this.progress.set(result.progress);
+    return result;
   }
 
   hasUnlock(id: string): boolean {

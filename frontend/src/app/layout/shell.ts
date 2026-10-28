@@ -104,7 +104,7 @@ import { ProgressStoreService } from '../core/services/progress-store.service';
       }
       .main {
         padding: clamp(1.25rem, 3vw, 2.5rem);
-        max-width: 1100px;
+        max-width: 1180px;
         margin: 0 auto;
       }
       @media (max-width: 820px) {

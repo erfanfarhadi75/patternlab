@@ -8,6 +8,7 @@ public interface IProgressService
     ProgressSnapshotDto Get(string userId);
     ProgressSnapshotDto CompleteLesson(string userId, CompleteLessonRequest request);
     SubmitAnswerResponse SubmitAnswer(string userId, SubmitAnswerRequest request, PatternDetailDto pattern);
+    CompleteArenaResponse CompleteArena(string userId, CompleteArenaRequest request);
 }
 
 public sealed class ProgressService : IProgressService
@@ -116,6 +117,77 @@ public sealed class ProgressService : IProgressService
                 ToSnapshot(progress),
                 exercise.Explanation
             );
+        }
+    }
+
+    private static readonly Dictionary<string, int> ArenaXp = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["factory-method:blocks"] = 40,
+        ["factory-method:code"] = 35,
+        ["factory-method:refactor"] = 40,
+        ["adapter:blocks"] = 40,
+        ["adapter:code"] = 35,
+        ["adapter:refactor"] = 40,
+        ["observer:blocks"] = 45,
+        ["observer:code"] = 35,
+        ["observer:refactor"] = 40,
+    };
+
+    public CompleteArenaResponse CompleteArena(string userId, CompleteArenaRequest request)
+    {
+        lock (_gate)
+        {
+            var key = $"{request.PatternId}:{request.ChallengeId}";
+            if (!ArenaXp.TryGetValue(key, out var reward))
+            {
+                throw new KeyNotFoundException($"Arena challenge '{key}' is not registered.");
+            }
+
+            var store = Load();
+            var progress = store.GetOrCreate(userId);
+            TouchStreak(progress);
+
+            var awardKey = $"{request.PatternId}:arena:{request.ChallengeId}";
+            var xp = 0;
+            Dictionary<string, string> feedback;
+
+            if (!request.Passed)
+            {
+                feedback = new Dictionary<string, string>
+                {
+                    ["en"] = "Structure not quite right yet — adjust the blocks and try again.",
+                    ["fa"] = "ساختار هنوز دقیق نیست — قطعات را تنظیم کنید و دوباره تلاش کنید."
+                };
+                Save(store.With(progress));
+                return new CompleteArenaResponse(false, 0, ToSnapshot(progress), feedback);
+            }
+
+            if (!progress.CompletedExercises.Contains(awardKey, StringComparer.OrdinalIgnoreCase))
+            {
+                progress.CompletedExercises.Add(awardKey);
+                xp = reward;
+                progress.Xp += xp;
+                progress.PatternScores[request.PatternId] =
+                    progress.PatternScores.GetValueOrDefault(request.PatternId) + xp;
+                MaybeAwardAchievements(progress);
+                MaybeUnlock(progress);
+                feedback = new Dictionary<string, string>
+                {
+                    ["en"] = $"Arena cleared. Pattern structure holds. +{xp} XP.",
+                    ["fa"] = $"زمین تمرین پاک شد. ساختار الگو درست است. +{xp} امتیاز."
+                };
+            }
+            else
+            {
+                feedback = new Dictionary<string, string>
+                {
+                    ["en"] = "Already cleared — no extra XP, but the run still counts for practice.",
+                    ["fa"] = "قبلاً پاک شده — امتیاز اضافه نیست، ولی تمرین حساب می‌شود."
+                };
+            }
+
+            Save(store.With(progress));
+            return new CompleteArenaResponse(true, xp, ToSnapshot(progress), feedback);
         }
     }
 

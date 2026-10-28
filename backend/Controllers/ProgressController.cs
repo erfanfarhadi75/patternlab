@@ -44,4 +44,22 @@ public sealed class ProgressController(IProgressService progress, IContentServic
             return Conflict(new { error = ex.Message });
         }
     }
+
+    [HttpPost("{userId}/arena/complete")]
+    public ActionResult<CompleteArenaResponse> CompleteArena(string userId, [FromBody] CompleteArenaRequest request)
+    {
+        if (content.GetPattern(request.PatternId) is null)
+        {
+            return NotFound(new { error = "Pattern not found" });
+        }
+
+        try
+        {
+            return progress.CompleteArena(userId, request);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+    }
 }

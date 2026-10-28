@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   CatalogResponse,
+  CompleteArenaResponse,
   PatternDetailDto,
   ProgressSnapshotDto,
   SubmitAnswerResponse,
@@ -49,6 +50,22 @@ export class ApiService {
   ): Observable<SubmitAnswerResponse> {
     return this.http.post<SubmitAnswerResponse>(
       `${this.base}/progress/${userId}/exercises/submit`,
+      body
+    );
+  }
+
+  completeArena(
+    userId: string,
+    body: {
+      patternId: string;
+      challengeId: string;
+      mode: string;
+      passed: boolean;
+      score: number;
+    }
+  ): Observable<CompleteArenaResponse> {
+    return this.http.post<CompleteArenaResponse>(
+      `${this.base}/progress/${userId}/arena/complete`,
       body
     );
   }
