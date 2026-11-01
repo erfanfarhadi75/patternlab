@@ -58,6 +58,26 @@ Arena clears persist through `POST /api/progress/{userId}/arena/complete` (first
 - XP, user level, non-punitive streak; unlockable advanced Observer challenge
 - Settings in `localStorage`; progress JSON under `backend/Data/`
 
+## Production (single URL)
+
+The API can serve the Angular SPA from `wwwroot` so one HTTPS origin serves UI + `/api`.
+
+```bash
+./scripts/build-prod.sh
+cd artifacts/publish
+ASPNETCORE_URLS=http://0.0.0.0:8080 ASPNETCORE_ENVIRONMENT=Production \
+  dotnet PatternLab.Api.dll
+```
+
+Or build/run the root `Dockerfile` (exposes port 8080).
+
+### Deploy
+
+- **Render (free):** [Deploy to Render](https://render.com/deploy?repo=https://github.com/erfanfarhadi75/patternlab) after connecting GitHub (uses `render.yaml`).
+- **Fly.io:** `fly auth login && fly launch --no-deploy && fly deploy` (`fly.toml`).
+
+Optional `CORS_ORIGINS=https://your-frontend.example` if the SPA is hosted separately. Same-origin deploy does not need it — the UI calls relative `/api`.
+
 ## Later
 
 Compare Patterns depth, remaining GoF patterns, multi-language code samples, accounts sync.
