@@ -1,0 +1,6 @@
+@PatternLab.Api_HostAddress = http://localhost:5080
+
+GET {{PatternLab.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
