@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.angular
+**/bin
+**/obj
+**/.git
+**/.github
+**/*.md
+backend/Data/progress-store.json
+backend/wwwroot
+.env
+.env.*

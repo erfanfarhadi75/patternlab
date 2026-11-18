@@ -12,7 +12,11 @@ import {
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
-  private readonly base = 'http://127.0.0.1:5287/api';
+  /** Same-origin `/api` in production (SPA served by API). Local `ng serve` uses proxy.conf.json. */
+  private readonly base =
+    (typeof globalThis !== 'undefined' &&
+      (globalThis as { PATTERNLAB_API_BASE?: string }).PATTERNLAB_API_BASE) ||
+    '/api';
 
   getCatalog(category?: string, q?: string): Observable<CatalogResponse> {
     let params = new HttpParams();

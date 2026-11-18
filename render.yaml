@@ -1,0 +1,14 @@
+# One-click: https://render.com/deploy?repo=https://github.com/erfanfarhadi75/patternlab
+services:
+  - type: web
+    name: patternlab
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:8080

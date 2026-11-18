@@ -8,6 +8,7 @@ npm-debug.log*
 # .NET
 backend/bin/
 backend/obj/
+backend/wwwroot/
 backend/Data/progress-store.json
 
 # IDE / OS
@@ -19,3 +20,5 @@ backend/Data/progress-store.json
 # Env
 .env
 .env.*
+
+artifacts/
