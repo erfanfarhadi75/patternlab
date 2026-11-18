@@ -41,3 +41,18 @@ public record SubmitAnswerResponse(
     ProgressSnapshotDto Progress,
     Dictionary<string, string> Explanation
 );
+
+public record CompleteArenaRequest(
+    string PatternId,
+    string ChallengeId,
+    string Mode,
+    bool Passed,
+    int Score
+);
+
+public record CompleteArenaResponse(
+    bool Accepted,
+    int XpAwarded,
+    ProgressSnapshotDto Progress,
+    Dictionary<string, string> Feedback
+);

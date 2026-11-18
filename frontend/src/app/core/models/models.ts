@@ -92,3 +92,13 @@ export interface SubmitAnswerResponse {
   progress: ProgressSnapshotDto;
   explanation: Record<string, string>;
 }
+
+export type ArenaMode = 'blocks' | 'code' | 'refactor' | 'quiz';
+export type ArenaRelation = 'creates' | 'implements' | 'notifies' | 'wraps' | 'extends' | 'uses';
+
+export interface CompleteArenaResponse {
+  accepted: boolean;
+  xpAwarded: number;
+  progress: ProgressSnapshotDto;
+  feedback: Record<string, string>;
+}

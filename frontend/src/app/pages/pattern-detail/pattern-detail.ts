@@ -32,7 +32,13 @@ import { QuizPanel } from '../../shared/quiz-panel';
             <button type="button" role="tab" [class.active]="tab() === 'quiz'" (click)="tab.set('quiz')">
               {{ 'mode.quiz' | t }}
             </button>
-            <span class="soon" title="{{ 'coming.soon.body' | t }}">{{ 'mode.comingSoon' | t }}</span>
+            <a
+              class="play-tab"
+              routerLink="/practice"
+              [queryParams]="{ pattern: pattern()!.id, mode: 'blocks' }"
+            >
+              {{ 'cta.play' | t }}
+            </a>
           </div>
         </header>
 
@@ -83,7 +89,13 @@ import { QuizPanel } from '../../shared/quiz-panel';
         <footer class="similar">
           <h2>{{ 'detail.similar' | t }}</h2>
           <p class="muted">{{ pattern()!.similarPatternIds.join(' · ') }}</p>
-          <p class="muted soon-note">{{ 'coming.soon.body' | t }}</p>
+          <a
+            class="btn primary"
+            routerLink="/practice"
+            [queryParams]="{ pattern: pattern()!.id, mode: 'blocks' }"
+          >
+            {{ 'cta.play' | t }}
+          </a>
           <a routerLink="/explorer" class="btn ghost">{{ 'cta.explore' | t }}</a>
         </footer>
       </article>
@@ -131,10 +143,14 @@ import { QuizPanel } from '../../shared/quiz-panel';
         border-color: var(--accent);
         background: color-mix(in oklab, var(--accent) 14%, transparent);
       }
-      .soon {
-        font-size: 0.8rem;
-        color: var(--muted);
-        margin-inline-start: 0.4rem;
+      .play-tab {
+        text-decoration: none;
+        padding: 0.45rem 0.9rem;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: linear-gradient(135deg, var(--accent), color-mix(in oklab, var(--accent) 60%, var(--accent-2)));
+        color: #f4fffb;
+        font-size: 0.92rem;
       }
       .block {
         padding: 1.2rem 0;

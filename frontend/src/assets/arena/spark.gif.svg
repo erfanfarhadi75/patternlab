@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <g fill="#f59e0b">
+    <circle cx="40" cy="40" r="6">
+      <animate attributeName="r" values="4;10;4" dur="1.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1;0.4;1" dur="1.2s" repeatCount="indefinite"/>
+    </circle>
+    <rect x="38" y="8" width="4" height="14" rx="2">
+      <animate attributeName="opacity" values="0;1;0" dur="1.2s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="38" y="58" width="4" height="14" rx="2">
+      <animate attributeName="opacity" values="0;1;0" dur="1.2s" begin="0.2s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="8" y="38" width="14" height="4" rx="2">
+      <animate attributeName="opacity" values="0;1;0" dur="1.2s" begin="0.1s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="58" y="38" width="14" height="4" rx="2">
+      <animate attributeName="opacity" values="0;1;0" dur="1.2s" begin="0.3s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  <circle cx="40" cy="40" r="18" fill="none" stroke="#0f766e" stroke-width="3" opacity="0.5">
+    <animate attributeName="r" values="12;28" dur="1.2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.7;0" dur="1.2s" repeatCount="indefinite"/>
+  </circle>
+</svg>
